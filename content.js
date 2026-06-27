@@ -317,23 +317,25 @@
   // 行内格式：`code` / **bold** / *italic* / [text](url) / LaTeX 公式
   // 先用占位符保护行内代码和 LaTeX 公式，避免其内容被 bold/italic 误伤
   function renderInline(text) {
-    // ★ 先提取 LaTeX（在 escapeHtml 之前），保护 $..._ ^ 等不被 Markdown 误解析
     const maths = [];
+    const codes = [];
     let raw = text;
+    // ★ 先提取行内代码（在 LaTeX 之前），保护反引号内的 \[ \] $ 等不被误解析为公式
+    raw = raw.replace(/`([^`\n]+)`/g, (_, c) => { codes.push(c); return '\u0001' + (codes.length - 1) + '\u0001'; });
+    // 再提取 LaTeX（在 escapeHtml 之前），保护 $..._ ^ 等不被 Markdown 误解析
     raw = raw.replace(/\$\$([^$]+)\$\$/g,    (_, m) => { maths.push({ d: true,  t: m }); return '\u0002' + (maths.length - 1) + '\u0002'; });
     raw = raw.replace(/\\\[([\s\S]+?)\\\]/g,  (_, m) => { maths.push({ d: true,  t: m }); return '\u0002' + (maths.length - 1) + '\u0002'; });
     raw = raw.replace(/\\\(([\s\S]+?)\\\)/g,  (_, m) => { maths.push({ d: false, t: m }); return '\u0002' + (maths.length - 1) + '\u0002'; });
     raw = raw.replace(/\$([^$\n]+)\$/g,       (_, m) => { maths.push({ d: false, t: m }); return '\u0002' + (maths.length - 1) + '\u0002'; });
 
     let t = escapeHtml(raw);
-    const codes = [];
-    t = t.replace(/`([^`\n]+)`/g, (_, c) => { codes.push(c); return '\u0001' + (codes.length - 1) + '\u0001'; });
+    // 恢复行内代码（在 bold/italic 之前，防止代码内容被误解析）
+    t = t.replace(/\u0001(\d+)\u0001/g, (_, n) => '<code class="usa-code-inline">' + escapeHtml(codes[+n]) + '</code>');
     t = t.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
     t = t.replace(/__([^_]+)__/g, '<strong>$1</strong>');
     t = t.replace(/(^|[^*])\*([^*\n]+)\*/g, '$1<em>$2</em>');
     t = t.replace(/(^|[^_])_([^_\n]+)_/g, '$1<em>$2</em>');
     t = t.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)"<>]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
-    t = t.replace(/\u0001(\d+)\u0001/g, (_, n) => '<code class="usa-code-inline">' + codes[+n] + '</code>');
     // ★ 恢复 LaTeX：把界定符放回文本节点，让 renderMathInElement 能识别
     t = t.replace(/\u0002(\d+)\u0002/g, (_, n) => {
       const m = maths[+n];
@@ -352,12 +354,34 @@
     let para = [];
     let inCode = false, codeBuf = [];
     let inMath = false, mathBuf = [];
+    let inBracketMath = false, bracketMathBuf = [];
 
     const closeList = () => { if (listOpen) { out.push('</ul>'); listOpen = false; } if (olOpen) { out.push('</ol>'); olOpen = false; } };
     const flushPara = () => { if (para.length) { out.push('<p>' + para.map(renderInline).join('<br>') + '</p>'); para = []; } };
 
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];
+
+      // ★ \[...\] 数学公式块 — 优先处理：块内时任何行（含 ``` 和 $$）都作为公式内容
+      // 防止块内的围栏/$$ 行破坏状态。块内内容绕过 renderInline，仅 escapeHtml。
+      // 整块放入一个 <div>，保证 \[ 和 \] 在同一文本节点内，renderMathInElement 能正确配对。
+      if (inBracketMath) {
+        const endIdx = line.indexOf('\\]');
+        if (endIdx >= 0) {
+          // \] 前的内容加入缓冲
+          const before = line.slice(0, endIdx);
+          if (before.trim()) bracketMathBuf.push(before);
+          flushPara(); closeList();
+          out.push('<div class="usa-math-block">\\[' + escapeHtml(bracketMathBuf.join('\n')) + '\\]</div>');
+          bracketMathBuf = []; inBracketMath = false;
+          // \] 后的内容如果有，作为新段落起点
+          const after = line.slice(endIdx + 2);
+          if (after.trim()) para.push(after);
+        } else {
+          bracketMathBuf.push(line);
+        }
+        continue;
+      }
 
       // $$ 数学公式块（独占一行的 $$ 作为围栏，类似代码块）
       if (/^\s*\$\$\s*$/.test(line)) {
@@ -384,6 +408,26 @@
       }
       if (inCode) { codeBuf.push(line); continue; }
 
+      // 检测 \[ 块开始：行中有 \[（代码跨度外）但同行无对应 \]
+      // 正则 ^((?:[^`]|`[^`]*`)*?)\\\[ 排除反引号内的 \[，避免误识别代码示例
+      const startMatch = line.match(/^((?:[^`]|`[^`]*`)*?)\\\[/);
+      if (startMatch) {
+        const afterBracket = line.slice(startMatch[0].length);
+        // 同行 \[ 之后（代码跨度外）是否有 \]
+        const endInRest = afterBracket.match(/^((?:[^`]|`[^`]*`)*?)\\\]/);
+        if (!endInRest) {
+          // 同行无 \] — 进入块模式
+          const before = startMatch[1];
+          if (before.trim()) para.push(before);
+          flushPara(); closeList();
+          inBracketMath = true;
+          bracketMathBuf = [];
+          if (afterBracket.trim()) bracketMathBuf.push(afterBracket);
+          continue;
+        }
+        // 同行有完整 \[...\] — 走默认路径，由 renderInline 处理
+      }
+
       // 空行：段落分隔
       if (/^\s*$/.test(line)) { closeList(); flushPara(); continue; }
 
@@ -404,6 +448,7 @@
 
     // 收尾：未闭合的代码块/数学块直接闭合（流式场景）
     if (inMath) out.push('<div class="usa-math-block">$$' + escapeHtml(mathBuf.join('\n')) + '$$</div>');
+    if (inBracketMath) out.push('<div class="usa-math-block">\\[' + escapeHtml(bracketMathBuf.join('\n')) + '\\]</div>');
     if (inCode) out.push('<pre class="usa-code"><code>' + escapeHtml(codeBuf.join('\n')) + '</code></pre>');
     closeList();
     flushPara();
