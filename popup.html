@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+                   "Helvetica Neue", Arial, "PingFang SC", "Microsoft YaHei", sans-serif;
+      width: 300px; padding: 16px; color: #1f2329;
+    }
+    .header { margin-bottom: 14px; }
+    .header h1 { font-size: 16px; font-weight: 700; }
+    .header p { font-size: 12px; color: #9aa0a6; margin-top: 2px; }
+    .status-box {
+      display: flex; align-items: center; gap: 8px;
+      padding: 10px 12px; border-radius: 8px;
+      margin-bottom: 12px; font-size: 13px;
+    }
+    .status-box.ok { background: rgba(30,142,62,0.08); color: #1e8e3e; }
+    .status-box.warn { background: rgba(217,48,37,0.08); color: #d93025; }
+    .dot { width: 8px; height: 8px; border-radius: 50%; flex: 0 0 auto; }
+    .status-box.ok .dot { background: #1e8e3e; }
+    .status-box.warn .dot { background: #d93025; }
+    .info { font-size: 12px; color: #5f6368; margin-bottom: 12px; line-height: 1.5; }
+    .info b { color: #1f2329; }
+    .btn {
+      display: block; width: 100%; padding: 10px;
+      font-size: 14px; font-weight: 600; color: #fff;
+      background: #4f8cf0; border: none; border-radius: 8px;
+      cursor: pointer; transition: background .15s ease; margin-bottom: 14px;
+    }
+    .btn:hover { background: #3b7be0; }
+    .tip {
+      font-size: 12px; color: #9aa0a6; line-height: 1.6;
+      border-top: 1px solid #e8eaed; padding-top: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>🔍 Universal Sub-Agent</h1>
+    <p>网页划词 AI 助手</p>
+  </div>
+
+  <div class="status-box" id="statusBox">
+    <span class="dot"></span>
+    <span id="statusText">检查中...</span>
+  </div>
+
+  <div class="info" id="info"></div>
+
+  <button class="btn" id="openSettings">⚙ 打开设置 / Settings</button>
+
+  <div class="tip">
+    在任意网页划选文字，选区旁会弹出"🔍 解释"按钮，点击即可提问。
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
