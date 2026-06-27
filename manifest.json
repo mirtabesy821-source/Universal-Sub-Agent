@@ -3,7 +3,7 @@
   "name": "Universal Sub-Agent",
   "version": "1.0.0",
   "description": "在任何网页上划选文字，即可弹出局部 AI 解答窗口，解答内容不污染原对话上下文。Select text on any webpage to get AI explanations in a floating dialog.",
-  "homepage_url": "https://github.com/mirtabesy821/universal-sub-agent",
+  "homepage_url": "https://github.com/mirtabesy821-source/Universal-Sub-Agent",
   "icons": {
     "16": "icons/icon16.png",
     "48": "icons/icon48.png",

@@ -46,7 +46,7 @@ const PROVIDERS = {
     name: 'OpenRouter',
     url: 'https://openrouter.ai/api/v1/chat/completions',
     model: 'meta-llama/llama-3-8b-instruct',
-    extraHeaders: { 'HTTP-Referer': 'https://github.com/mirtabesy821/universal-sub-agent', 'X-Title': 'Universal Sub-Agent' },
+    extraHeaders: { 'HTTP-Referer': 'https://github.com/mirtabesy821-source/Universal-Sub-Agent', 'X-Title': 'Universal Sub-Agent' },
     keyUrl: 'https://openrouter.ai/keys'
   }
 };
