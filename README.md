@@ -41,7 +41,7 @@ Select text on any webpage to get AI-powered explanations in a floating dialog.
 1. 下载本项目代码：
 
    ```bash
-   git clone https://github.com/your-username/universal-sub-agent.git
+   git clone https://github.com/mirtabesy821/universal-sub-agent.git
    ```
 
 2. 打开 Chrome，地址栏输入 `chrome://extensions`

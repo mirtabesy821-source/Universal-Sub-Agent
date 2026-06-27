@@ -4,7 +4,7 @@
 
 If you discover a security vulnerability, please **do not** open a public issue.
 
-Email: [your-security-email@example.com] or send a private message via GitHub.
+Please use [GitHub's private vulnerability reporting](../../security/advisories/new) or send a private message via GitHub.
 
 We will respond within 48 hours and credit responsible reporters in the fix.
 
