@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Universal Sub-Agent — 隐私政策 / Privacy Policy</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", sans-serif; max-width: 720px; margin: 40px auto; padding: 0 20px; color: #333; line-height: 1.7; }
+    h1 { font-size: 24px; border-bottom: 2px solid #4f8cf0; padding-bottom: 8px; }
+    h2 { font-size: 18px; margin-top: 28px; color: #4f8cf0; }
+    p { margin: 10px 0; }
+  </style>
+</head>
+<body>
+  <h1>Universal Sub-Agent — 隐私政策</h1>
+  <p><strong>最后更新：2026-07-05</strong></p>
+
+  <h2>1. 数据收集与存储</h2>
+  <p>本扩展 <strong>不收集、不存储、不传输任何用户个人身份数据</strong>。所有用户配置（包括 API Key、选择的厂商、自定义模型名称）仅存储在用户本地的 <code>chrome.storage.local</code> 中，开发者无法访问这些信息。</p>
+
+  <h2>2. 权限说明</h2>
+  <ul>
+    <li><strong>activeTab / scripting</strong> — 仅在用户主动点击扩展图标或划选文字时，向当前标签页注入内容脚本以显示解释按钮和浮动窗口。</li>
+    <li><strong>storage</strong> — 用于在本地存储用户的 API Key、厂商选择和模型配置。</li>
+    <li><strong>host_permissions: &lt;all_urls&gt;</strong> — 使扩展能够在任意网页上工作。页面内容仅在用户主动划选文字并点击"发送"时，通过用户配置的 API Key 发送到对应的 LLM 厂商。</li>
+  </ul>
+
+  <h2>3. 第三方服务</h2>
+  <p>用户划选的文字和提问内容会被发送到用户自行选择的 LLM 厂商（DeepSeek、通义千问、智谱GLM、Kimi、OpenRouter 之一）。本扩展开发者不对这些第三方服务的隐私政策负责。请查阅对应厂商的隐私政策。</p>
+
+  <h2>4. 数据安全</h2>
+  <p>API Key 以明文形式存储在 <code>chrome.storage.local</code>。本扩展不通过任何方式向开发者或第三方服务器上传 API Key。</p>
+
+  <h2>5. 联系方式</h2>
+  <p>如有疑问，请通过 GitHub Issues 联系：<a href="https://github.com/mirtabesy821-source/Universal-Sub-Agent/issues">github.com/mirtabesy821-source/Universal-Sub-Agent/issues</a></p>
+</body>
+</html>
