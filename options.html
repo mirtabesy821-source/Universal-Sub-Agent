@@ -28,12 +28,13 @@
       margin-bottom: 6px;
     }
     .field .hint { font-size: 12px; color: #9aa0a6; margin-top: 4px; }
-    .field select, .field input[type="text"], .field input[type="password"] {
+    .field select, .field input[type="text"], .field input[type="password"], .field textarea {
       width: 100%; padding: 10px 12px; font-size: 14px; color: #1f2329;
       background: #fff; border: 1px solid #dadce0; border-radius: 8px;
       outline: none; transition: border-color .15s ease;
+      font-family: inherit; resize: vertical;
     }
-    .field select:focus, .field input:focus { border-color: #4f8cf0; }
+    .field select:focus, .field input:focus, .field textarea:focus { border-color: #4f8cf0; }
     .key-row { display: flex; gap: 8px; align-items: center; }
     .key-row input { flex: 1; }
     .toggle-key {
@@ -74,7 +75,7 @@
 <body>
   <div class="container">
     <div class="header">
-      <h1>Universal Sub-Agent</h1>
+      <h1>Universal Sub-Agent <span style="background:#4f8cf0;color:#fff;font-size:12px;padding:2px 8px;border-radius:4px;vertical-align:middle;">v1.2.1</span></h1>
       <p>在任何网页上划选文字，即可获得 AI 局部解答</p>
     </div>
 
@@ -105,6 +106,12 @@
         <label for="model">模型名称 / Model（可选）</label>
         <input type="text" id="model" placeholder="留空使用厂商默认模型" />
         <div class="hint">可填写厂商支持的其它模型名称，如 deepseek-reasoner、qwen-plus 等。</div>
+      </div>
+
+      <div class="field">
+        <label for="systemPrompt">AI 回复风格 / System Prompt</label>
+        <textarea id="systemPrompt" rows="4">你是一个精准的局部解答助手。请仔细阅读用户提供的【全局背景资料】和【用户划选的局部片段】，在该语境下针对用户的疑问进行解答。支持多轮对话，请参考历史对话保持上下文连贯。</textarea>
+        <div class="hint">自定义 AI 的回复风格和角色设定。修改上方文字后保存即可生效，清空则恢复默认。</div>
       </div>
 
       <button class="save-btn" id="saveBtn">保存设置</button>

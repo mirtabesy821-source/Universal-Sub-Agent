@@ -52,9 +52,9 @@ const PROVIDERS = {
 };
 
 // 从 chrome.storage.local 读取用户配置（API Key / 厂商 / 模型）
-// Storage schema: { apiKey: string, provider: string, model: string }
+// Storage schema: { apiKey: string, provider: string, model: string, systemPrompt: string }
 async function getConfig() {
-  const data = await chrome.storage.local.get(['apiKey', 'provider', 'model']);
+  const data = await chrome.storage.local.get(['apiKey', 'provider', 'model', 'systemPrompt']);
   const provider = data.provider || DEFAULT_PROVIDER;
   const cfg = PROVIDERS[provider] || PROVIDERS[DEFAULT_PROVIDER];
   return {
@@ -64,11 +64,12 @@ async function getConfig() {
     extraHeaders: cfg.extraHeaders,
     keyUrl: cfg.keyUrl,
     provider,
-    apiKey: data.apiKey || ''
+    apiKey: data.apiKey || '',
+    systemPrompt: data.systemPrompt || DEFAULT_SYSTEM_PROMPT
   };
 }
 
-const SYSTEM_PROMPT = '你是一个精准的局部解答助手。请仔细阅读用户提供的【全局背景资料】和【用户划选的局部片段】，在该语境下针对用户的疑问进行解答。支持多轮对话，请参考历史对话保持上下文连贯。';
+const DEFAULT_SYSTEM_PROMPT = '你是一个精准的局部解答助手。请仔细阅读用户提供的【全局背景资料】和【用户划选的局部片段】，在该语境下针对用户的疑问进行解答。支持多轮对话，请参考历史对话保持上下文连贯。';
 
 // 插件首次安装 / 更新 / 浏览器更新时触发
 chrome.runtime.onInstalled.addListener((details) => {
@@ -138,7 +139,7 @@ async function streamAskAI(message, sender) {
   const contextBlock =
     (pageContext ? '【全局背景资料】：\n' + pageContext + '\n\n' : '') +
     (selectedText ? '【用户划选的局部片段】：\n' + selectedText : '');
-  const systemContent = SYSTEM_PROMPT + (contextBlock ? '\n\n' + contextBlock : '');
+  const systemContent = cfg.systemPrompt + (contextBlock ? '\n\n' + contextBlock : '');
 
   const messages = [
     { role: 'system', content: systemContent },

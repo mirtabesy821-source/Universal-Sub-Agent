@@ -1,6 +1,6 @@
 // ============================================================
 // Universal Sub-Agent - 设置页逻辑 (Options Page)
-// 读取/保存 API Key、厂商、模型到 chrome.storage.local
+// 读取/保存 API Key、厂商、模型、系统提示词到 chrome.storage.local
 // ============================================================
 
 var PROVIDERS = {
@@ -11,9 +11,12 @@ var PROVIDERS = {
   openrouter: { name: 'OpenRouter', model: 'meta-llama/llama-3-8b-instruct', keyUrl: 'https://openrouter.ai/keys' }
 };
 
+var DEFAULT_SYSTEM_PROMPT = '你是一个精准的局部解答助手。请仔细阅读用户提供的【全局背景资料】和【用户划选的局部片段】，在该语境下针对用户的疑问进行解答。支持多轮对话，请参考历史对话保持上下文连贯。';
+
 var providerEl = document.getElementById('provider');
 var apiKeyEl = document.getElementById('apiKey');
 var modelEl = document.getElementById('model');
+var systemPromptEl = document.getElementById('systemPrompt');
 var saveBtn = document.getElementById('saveBtn');
 var statusEl = document.getElementById('status');
 var toggleBtn = document.getElementById('toggleKey');
@@ -27,8 +30,10 @@ function onProviderChange() {
   getKeyLink.href = p.keyUrl;
 }
 
+console.log('[Universal Sub-Agent] 设置页已加载 v1.2.1, systemPromptEl=', !!systemPromptEl, 'value length=', systemPromptEl ? systemPromptEl.value.length : 0);
+
 // 页面加载时读取已保存的配置
-chrome.storage.local.get(['apiKey', 'provider', 'model'], function (data) {
+chrome.storage.local.get(['apiKey', 'provider', 'model', 'systemPrompt'], function (data) {
   if (data.provider && PROVIDERS[data.provider]) {
     providerEl.value = data.provider;
   }
@@ -37,6 +42,9 @@ chrome.storage.local.get(['apiKey', 'provider', 'model'], function (data) {
   }
   if (data.model) {
     modelEl.value = data.model;
+  }
+  if (data.systemPrompt) {
+    systemPromptEl.value = data.systemPrompt;
   }
   onProviderChange();
 });
@@ -60,7 +68,8 @@ saveBtn.addEventListener('click', function () {
   var config = {
     apiKey: apiKeyEl.value.trim(),
     provider: providerEl.value,
-    model: modelEl.value.trim()
+    model: modelEl.value.trim(),
+    systemPrompt: systemPromptEl.value.trim()
   };
 
   if (!config.apiKey) {

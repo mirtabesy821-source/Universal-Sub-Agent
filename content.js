@@ -217,6 +217,8 @@
   // 当前划选文本（mouseup 时写入，按钮点击时消费）
   let currentText = '';
   let currentPageContext = '';
+  // 若本次划选发生在某个对话框内部，记录其实例（用于新子窗继承父窗上下文）
+  let currentParentInst = null;
 
   // 上下文失效检测
   let dead = false;
@@ -494,6 +496,18 @@
     }
   }
 
+  // 根据鼠标事件的传播路径，找出选区所在的对话框实例（无则返回 null）
+  function findParentInstFromEvent(e) {
+    const path = (typeof e.composedPath === 'function') ? e.composedPath() : [];
+    for (let i = 0; i < path.length; i++) {
+      const node = path[i];
+      if (node && node.classList && node.classList.contains('usa-dialog')) {
+        return activeDialogs.find(function (d) { return d.dialog === node; }) || null;
+      }
+    }
+    return null;
+  }
+
   // ===== DialogInstance 工厂函数 =====
   // 每个实例拥有独立的 DOM引用、对话历史、请求状态、渲染状态、拖拽状态等
   function createDialogInstance(selectedText, pageContext) {
@@ -516,6 +530,19 @@
 
     function setNumber(n) {
       if (winNumEl) winNumEl.textContent = String(n);
+    }
+
+    // 供"在本窗内划词新开子窗"时继承：本窗原始选中片段 + 完整多轮问答记录
+    function getInheritedContext() {
+      const parts = [];
+      if (selectedText) parts.push('【上级对话·原始选中片段】：\n' + selectedText);
+      if (chatHistory.length > 0) {
+        const transcript = chatHistory.map(function (m) {
+          return (m.role === 'user' ? '用户：' : '助手：') + m.content;
+        }).join('\n');
+        parts.push('【上级对话·记录】：\n' + transcript);
+      }
+      return parts.join('\n\n');
     }
 
     // ---- 实例方法 ----
@@ -737,7 +764,9 @@
       const stagger = (activeDialogs.length - 1) * 25;
       positionNearSelection(dialog, stagger, openClientX, openClientY);
       dialog.style.display = 'flex';
-      setTimeout(() => { if (inputEl) inputEl.focus(); }, 0);
+      setTimeout(() => {
+        if (inputEl) inputEl.focus();
+      }, 0);
     }
 
     // 实例公开接口
@@ -750,6 +779,7 @@
       handleDone: handleDone,
       handleError: handleError,
       setNumber: setNumber,
+      getInheritedContext: getInheritedContext,
       get currentRequestId() { return currentRequestId; },
       get dragState() { return dragState; },
       get dialog() { return dialog; }
@@ -766,7 +796,10 @@
     const text = getSelectionText();
     if (text.length === 0) { hideButton(); return; }
     currentText = text;
-    currentPageContext = getPageContext();
+    // 判断本次划选是否发生在某个对话框内部（Shadow DOM 内嵌套划词）
+    currentParentInst = findParentInstFromEvent(e);
+    // 网页内划词才抓取页面上下文；小窗内划词的上下文改由父窗继承提供
+    currentPageContext = currentParentInst ? '' : getPageContext();
     positionNearSelection(btn, 0, e.clientX, e.clientY);
     showButton();
   });
@@ -817,10 +850,13 @@
   btn.addEventListener('click', (e) => {
     e.stopPropagation();
     hideButton();
+    // 先取出父窗上下文（若本次划选发生在某对话框内），避免下方 FIFO 关闭时父窗被销毁
+    const inheritedContext = currentParentInst ? currentParentInst.getInheritedContext() : '';
+    const pageContext = currentParentInst ? inheritedContext : currentPageContext;
     if (activeDialogs.length >= MAX_WINDOWS) {
       activeDialogs.shift().closeDialog();
     }
-    const inst = createDialogInstance(currentText, currentPageContext);
+    const inst = createDialogInstance(currentText, pageContext);
     activeDialogs.push(inst);
     inst.openDialog(e.clientX, e.clientY);
     updateAllDialogNumbers();
