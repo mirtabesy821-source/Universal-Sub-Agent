@@ -7,8 +7,9 @@
 // 说明：MV3 service worker 非持久化，但流式 fetch 期间会保持活跃；
 //       API Key、模型等配置持久化在 chrome.storage.local。
 // ============================================================
-// ★ 模型厂商配置：默认厂商为 deepseek，用户可在设置页（右键扩展图标 → 选项）切换 ★
-// 可选：'deepseek' | 'qwen' | 'glm' | 'kimi' | 'openrouter'
+// ★ 多厂商 Key 存储：apiKeys[provider] 按厂商独立存放，切换厂商无需重新填 Key ★
+// 旧版兼容：首次读取时自动将 apiKey → apiKeys[provider] 迁移
+// 可选厂商：'deepseek' | 'qwen' | 'glm' | 'kimi' | 'openrouter' | 'mimo'
 const DEFAULT_PROVIDER = 'deepseek';
 
 // 各厂商预设（都走 OpenAI 兼容协议 + SSE 流式，核心代码无需改动）
@@ -48,28 +49,66 @@ const PROVIDERS = {
     model: 'meta-llama/llama-3-8b-instruct',
     extraHeaders: { 'HTTP-Referer': 'https://github.com/mirtabesy821-source/Universal-Sub-Agent', 'X-Title': 'Universal Sub-Agent' },
     keyUrl: 'https://openrouter.ai/keys'
+  },
+  mimo: {
+    name: 'MiMo',
+    url: 'https://api.xiaomimimo.com/v1/chat/completions',
+    model: 'mimo-v2.5-pro',
+    extraHeaders: {},
+    keyUrl: 'https://mimo.mi.com'
   }
 };
 
 // 从 chrome.storage.local 读取用户配置（API Key / 厂商 / 模型）
-// Storage schema: { apiKey: string, provider: string, model: string, systemPrompt: string }
-async function getConfig() {
-  const data = await chrome.storage.local.get(['apiKey', 'provider', 'model', 'systemPrompt']);
-  const provider = data.provider || DEFAULT_PROVIDER;
+// Storage schema: { apiKeys: { provider: 'key', ... }, models: { provider: 'model', ... }, provider: string }
+// 兼容旧版 { apiKey: string, model: string }：首次读取自动迁移到 apiKeys / models
+// requestedProvider 可选参数：允许消息指定厂商（每个对话框独立选厂商）
+async function getConfig(requestedProvider) {
+  const data = await chrome.storage.local.get(['apiKeys', 'apiKey', 'models', 'model', 'provider', 'systemPrompt']);
+
+  // 旧版迁移：apiKey / model 存在 → 一次性写入 apiKeys / models 并清理旧字段
+  let needMigration = false;
+  if (!data.apiKeys && data.apiKey) {
+    data.apiKeys = {};
+    data.apiKeys[data.provider || DEFAULT_PROVIDER] = data.apiKey;
+    needMigration = true;
+  }
+  if (!data.models && data.model) {
+    if (!data.models) data.models = {};
+    data.models[data.provider || DEFAULT_PROVIDER] = data.model;
+    needMigration = true;
+  }
+  if (needMigration) {
+    const toSave = {};
+    if (data.apiKeys) toSave.apiKeys = data.apiKeys;
+    if (data.models) toSave.models = data.models;
+    await chrome.storage.local.set(toSave);
+    await chrome.storage.local.remove(['apiKey', 'model']);
+  }
+
+  const provider = requestedProvider || data.provider || DEFAULT_PROVIDER;
   const cfg = PROVIDERS[provider] || PROVIDERS[DEFAULT_PROVIDER];
+  const apiKey = (data.apiKeys || {})[provider] || '';
+
+  // 优先用 per-provider 自定义模型，否则用厂商默认
+  const models = data.models || {};
+  const model = models[provider] || cfg.model;
+
   return {
     name: cfg.name,
     url: cfg.url,
-    model: data.model || cfg.model,
+    model: model,
     extraHeaders: cfg.extraHeaders,
     keyUrl: cfg.keyUrl,
     provider,
-    apiKey: data.apiKey || '',
-    systemPrompt: data.systemPrompt || DEFAULT_SYSTEM_PROMPT
+    apiKey,
+    // 注意：保留 systemPrompt 的 undefined 状态（不要 || ''），
+    // 以便 streamAskAI 区分「用户从未设置（用内置默认）」与「用户已设置（含空串，严格按用户所写）」。
+    systemPrompt: data.systemPrompt
   };
 }
 
-const DEFAULT_SYSTEM_PROMPT = '你是一个精准的局部解答助手。请仔细阅读用户提供的【全局背景资料】和【用户划选的局部片段】，在该语境下针对用户的疑问进行解答。支持多轮对话，请参考历史对话保持上下文连贯。';
+const SYSTEM_PROMPT = '你是一个精准的局部解答助手。请仔细阅读用户提供的【全局背景资料】、【用户划选位置】与【用户划选文字】，在该语境下针对用户的疑问进行解答。当用户划选的文字在资料中出现多处时，请以【用户划选位置】中用 ⟦ ⟧ 标出的确切实例为准，并结合其前后上下文进行精确分析。支持多轮对话，请参考历史对话保持上下文连贯。';
 
 // 插件首次安装 / 更新 / 浏览器更新时触发
 chrome.runtime.onInstalled.addListener((details) => {
@@ -117,8 +156,8 @@ async function streamAskAI(message, sender) {
     return;
   }
 
-  // 从 chrome.storage 加载用户配置（API Key / 厂商 / 模型）
-  const cfg = await getConfig();
+  // 从 chrome.storage 加载用户配置（API Key / 厂商 / 模型），支持对话框指定厂商
+  const cfg = await getConfig(message.provider);
 
   // 未配置 Key：引导用户去设置页
   if (!cfg.apiKey) {
@@ -133,13 +172,34 @@ async function streamAskAI(message, sender) {
   const userQuestion = message.userQuestion || '';
   const pageContext = message.pageContext || '';
   const chatHistory = message.chatHistory || [];
+  // 选词精确定位信息（content.js 采集：带 ⟦⟧ 标记的局部片段 + 字符偏移 + 根容器标签）
+  const selectionContext = message.selectionContext || null;
 
   // ★ 多轮对话：上下文放在 system 消息中（所有轮次都能看到），
   //   chatHistory 是之前的 Q&A 对，userQuestion 是本轮新问题。
+  // 定位区块：用 ⟦⟧ 在局部片段中精确框定用户所选的"那一个"实例，
+  // 并附字符偏移与根容器标签，使 AI 能在重复/相似文本中唯一锁定用户意图。
+  let positionBlock = '';
+  if (selectionContext && selectionContext.localFragment) {
+    positionBlock = '【用户划选位置（精确锁定，⟦ ⟧ 内为所选确切实例）】：\n'
+      + selectionContext.localFragment + '\n'
+      + (selectionContext.absStart != null
+        ? '（字符偏移：第 ' + selectionContext.absStart + '–' + selectionContext.absEnd + ' 位；所在位置：' + (selectionContext.rootLabel || '当前上下文') + '）\n'
+        : '');
+  }
   const contextBlock =
-    (pageContext ? '【全局背景资料】：\n' + pageContext + '\n\n' : '') +
-    (selectedText ? '【用户划选的局部片段】：\n' + selectedText : '');
-  const systemContent = cfg.systemPrompt + (contextBlock ? '\n\n' + contextBlock : '');
+    (pageContext ? '【全局背景资料】：\n' + pageContext + '\n\n' : '')
+    + (positionBlock ? positionBlock + '\n' : '')
+    + (selectedText ? '【用户划选的局部片段】：\n' + selectedText : '');
+
+  // 基础提示词（用户已在设置页看到并可编辑）：
+  //   - 从未设置（cfg.systemPrompt === undefined）→ 使用内置 SYSTEM_PROMPT 默认提示词
+  //   - 已设置（含空串）→ 严格按用户所写，空串表示不要基础提示词（仍会带上 contextBlock）
+  const userPrompt =
+    (cfg.systemPrompt !== undefined && cfg.systemPrompt !== null)
+      ? cfg.systemPrompt
+      : SYSTEM_PROMPT;
+  const systemContent = userPrompt + (contextBlock ? '\n\n' + contextBlock : '');
 
   const messages = [
     { role: 'system', content: systemContent },
@@ -225,8 +285,21 @@ async function streamAskAI(message, sender) {
         } catch (_) { /* 跳过不完整 / 非 JSON 行 */ }
       }
     }
-    // 流自然结束（未收到 [DONE]）
+    // 流自然结束（未收到 [DONE]），处理缓冲区残留的最后一帧数据
     clearTimeout(timeoutId);
+    if (buffer.trim()) {
+      const lastLine = buffer.trim();
+      if (lastLine.startsWith('data:')) {
+        const data = lastLine.slice(5).trim();
+        if (data !== '[DONE]') {
+          try {
+            const json = JSON.parse(data);
+            const chunk = json && json.choices && json.choices[0] && json.choices[0].delta && json.choices[0].delta.content;
+            if (chunk) { chunkCount++; sendToFrame({ type: 'AI_CHUNK', requestId, chunk }); }
+          } catch (_) { /* ignore */ }
+        }
+      }
+    }
     console.log('[Universal Sub-Agent] 流自然结束, 共', chunkCount, '个 chunk');
     sendToFrame({ type: 'AI_DONE', requestId });
   } catch (e) {

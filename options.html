@@ -22,7 +22,7 @@
       box-shadow: 0 1px 3px rgba(0,0,0,0.06);
     }
     .field { margin-bottom: 20px; }
-    .field:last-child { margin-bottom: 0; }
+    .field:last-of-type { margin-bottom: 0; }
     .field label {
       display: block; font-size: 14px; font-weight: 600; color: #1f2329;
       margin-bottom: 6px;
@@ -37,6 +37,21 @@
     .field select:focus, .field input:focus, .field textarea:focus { border-color: #4f8cf0; }
     .key-row { display: flex; gap: 8px; align-items: center; }
     .key-row input { flex: 1; }
+    .prompt-actions { margin-top: 8px; }
+    .mini-btn {
+      padding: 6px 12px; font-size: 12px; font-weight: 500;
+      color: #5f6368; background: #f1f3f4; border: 1px solid #dadce0;
+      border-radius: 6px; cursor: pointer; transition: all .15s ease;
+    }
+    .mini-btn:hover { background: #e8eaed; }
+    .prompt-structure { margin-top: 14px; border: 1px dashed #dadce0; border-radius: 8px; padding: 12px 14px; background: #fafbfc; }
+    .prompt-structure .ps-title { font-size: 12px; font-weight: 600; color: #5f6368; margin-bottom: 8px; }
+    .prompt-structure .ps-block { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace; font-size: 12px; line-height: 1.8; }
+    .prompt-structure .ps-line { padding: 1px 0; white-space: pre-wrap; }
+    .prompt-structure .ps-editable { color: #1a73e8; }
+    .prompt-structure .ps-locked { color: #b06000; }
+    .prompt-structure .ps-sub { color: #9aa0a6; font-size: 11px; }
+    .prompt-structure .ps-foot { margin-top: 8px; font-size: 11px; color: #9aa0a6; }
     .toggle-key {
       flex: 0 0 auto; padding: 10px 14px; font-size: 13px; font-weight: 500;
       color: #5f6368; background: #f1f3f4; border: 1px solid #dadce0;
@@ -70,12 +85,14 @@
     }
     .footer a { color: #4f8cf0; text-decoration: none; }
     .footer a:hover { text-decoration: underline; }
+    .key-badge { font-size: 11px; font-weight: 500; color: #9aa0a6; }
+    .key-badge.configured { color: #1e8e3e; }
   </style>
 </head>
 <body>
   <div class="container">
     <div class="header">
-      <h1>Universal Sub-Agent <span style="background:#4f8cf0;color:#fff;font-size:12px;padding:2px 8px;border-radius:4px;vertical-align:middle;">v1.2.1</span></h1>
+      <h1>Universal Sub-Agent</h1>
       <p>在任何网页上划选文字，即可获得 AI 局部解答</p>
     </div>
 
@@ -88,12 +105,13 @@
           <option value="glm">智谱GLM</option>
           <option value="kimi">Kimi (Moonshot)</option>
           <option value="openrouter">OpenRouter</option>
+          <option value="mimo">小米 MiMo</option>
         </select>
         <div class="hint">选择你要使用的 AI 服务商。所有厂商均兼容 OpenAI 协议。</div>
       </div>
 
       <div class="field">
-        <label for="apiKey">API Key</label>
+        <label for="apiKey">API Key <span class="key-badge" id="keyBadge">○ 未配置</span></label>
         <div class="key-row">
           <input type="password" id="apiKey" placeholder="sk-..." autocomplete="off" />
           <button class="toggle-key" id="toggleKey" type="button">显示</button>
@@ -109,9 +127,23 @@
       </div>
 
       <div class="field">
-        <label for="systemPrompt">AI 回复风格 / System Prompt</label>
-        <textarea id="systemPrompt" rows="4">你是一个精准的局部解答助手。请仔细阅读用户提供的【全局背景资料】和【用户划选的局部片段】，在该语境下针对用户的疑问进行解答。支持多轮对话，请参考历史对话保持上下文连贯。</textarea>
-        <div class="hint">自定义 AI 的回复风格和角色设定。修改上方文字后保存即可生效，清空则恢复默认。</div>
+        <label for="systemPrompt">AI 回复风格 / System Prompt（① 你的部分，可编辑）</label>
+        <textarea id="systemPrompt" rows="4" placeholder="（留空：后台不发送基础提示词）"></textarea>
+        <div class="prompt-actions">
+          <button type="button" class="mini-btn" id="resetPrompt">恢复默认提示词</button>
+        </div>
+
+        <div class="prompt-structure">
+          <div class="ps-title">最终发给 AI 的提示词结构（自上而下拼接）</div>
+          <div class="ps-block">
+            <div class="ps-line ps-editable">① 你的提示词（＝上方文本框，可编辑 / 清空）</div>
+            <div class="ps-line ps-locked">② 【全局背景资料】：<span class="ps-sub">（系统自动填入当前网页上下文，括号内文字不可修改）</span></div>
+            <div class="ps-line ps-locked">③ 【用户划选的局部片段】：<span class="ps-sub">（系统自动填入你划选的文字，括号内文字不可修改）</span></div>
+          </div>
+          <div class="ps-foot">② 与 ③ 由系统自动追加到提示词末尾，括号内文字已锁定，你无需也不能手写它们。</div>
+        </div>
+
+        <div class="hint">已预填系统默认提示词，可在此基础上增、删、改；也可清空后自写。清空并保存后，后台将只发送网页上下文与选中片段，不再附加基础提示词。</div>
       </div>
 
       <button class="save-btn" id="saveBtn">保存设置</button>
