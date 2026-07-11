@@ -8,7 +8,7 @@ const fs = require('fs');
 const path = require('path');
 const { JSDOM } = require('C:\\Users\\111\\node_modules\\jsdom');
 
-const PROJ = 'D:\\zhuomian\\universal-sub-agent-v1.1.0';
+const PROJ = path.resolve(__dirname);
 const dom = new JSDOM('<!DOCTYPE html><html><body></body></html>',
   { runScripts: 'outside-only', pretendToBeVisual: true, url: 'https://example.com/' });
 const { window } = dom;
