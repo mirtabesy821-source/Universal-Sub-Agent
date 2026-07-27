@@ -87,6 +87,44 @@
     .footer a:hover { text-decoration: underline; }
     .key-badge { font-size: 11px; font-weight: 500; color: #9aa0a6; }
     .key-badge.configured { color: #1e8e3e; }
+  
+    .tabs { display: flex; gap: 12px; margin-bottom: 20px; border-bottom: 1px solid #e8eaed; padding-bottom: 0; }
+    .tab-btn {
+      padding: 10px 16px; font-size: 15px; font-weight: 600; color: #5f6368;
+      background: transparent; border: none; border-bottom: 3px solid transparent;
+      cursor: pointer; transition: all .15s ease; margin-bottom: -1px;
+    }
+    .tab-btn:hover { color: #1f2329; }
+    .tab-btn.active { color: #4f8cf0; border-bottom-color: #4f8cf0; }
+    .tab-pane { display: none; }
+    .tab-pane.active { display: block; }
+    
+    /* History List CSS */
+    .history-item {
+      border: 1px solid #e8eaed; border-radius: 8px; padding: 16px; margin-bottom: 12px;
+      transition: box-shadow .15s ease;
+    }
+    .history-item:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+    .hi-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; }
+    .hi-title { font-weight: 600; font-size: 14px; color: #1f2329; margin-bottom: 4px; }
+    .hi-url { font-size: 12px; color: #4f8cf0; text-decoration: none; word-break: break-all; }
+    .hi-url:hover { text-decoration: underline; }
+    .hi-date { font-size: 12px; color: #9aa0a6; white-space: nowrap; margin-left: 12px; }
+    .hi-summary { font-size: 13px; color: #5f6368; background: #f8f9fa; padding: 8px 12px; border-radius: 6px; border-left: 3px solid #dadce0; cursor: pointer; }
+    .hi-messages { margin-top: 12px; display: none; font-size: 13px; border-top: 1px dashed #e8eaed; padding-top: 12px; max-height: 400px; overflow-y: auto; }
+    .hi-messages.open { display: block; }
+    .hm-row { margin-bottom: 8px; line-height: 1.5; padding-bottom: 8px; border-bottom: 1px solid #f1f3f4; }
+    .hm-role { font-weight: 600; margin-bottom: 4px; }
+    .hm-role.user { color: #1a73e8; }
+    .hm-role.assistant { color: #1e8e3e; }
+    .hm-content { white-space: pre-wrap; word-break: break-word; color: #1f2329; }
+    .clear-history-btn {
+      padding: 8px 16px; font-size: 13px; font-weight: 600; color: #d93025;
+      background: #fce8e6; border: none; border-radius: 6px; cursor: pointer; float: right;
+    }
+    .clear-history-btn:hover { background: #fad2cf; }
+    .clearfix::after { content: ""; clear: both; display: table; }
+
   </style>
 </head>
 <body>
@@ -95,7 +133,13 @@
       <h1>Universal Sub-Agent</h1>
       <p>在任何网页上划选文字，即可获得 AI 局部解答</p>
     </div>
+    <div class="tabs">
+      <button class="tab-btn active" data-target="tab-settings">常规设置</button>
+      <button class="tab-btn" data-target="tab-history">历史记录</button>
+    </div>
 
+
+    <div class="tab-pane active" id="tab-settings">
     <div class="card">
       <div class="field">
         <label for="provider">LLM 厂商 / Provider</label>
@@ -160,6 +204,17 @@
         <li>支持多轮对话、Markdown 排版和 LaTeX 数学公式渲染。</li>
       </ol>
     </div>
+    </div> <!-- /tab-settings -->
+
+    <div class="tab-pane" id="tab-history">
+      <div class="card">
+        <div class="clearfix" style="margin-bottom: 16px;">
+          <h2 style="font-size: 16px; float: left;">最近对话记录</h2>
+          <button class="clear-history-btn" id="clearHistoryBtn">清空历史</button>
+        </div>
+        <div id="historyListContainer" style="color: #5f6368; font-size: 14px;">加载中...</div>
+      </div>
+    </div>
 
     <div class="footer">
       <a href="https://github.com/mirtabesy821-source/Universal-Sub-Agent" target="_blank" rel="noopener noreferrer">GitHub</a>
@@ -167,6 +222,7 @@
     </div>
   </div>
 
+  <script src="shared/config.js"></script>
   <script src="options.js"></script>
 </body>
 </html>

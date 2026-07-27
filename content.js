@@ -11,12 +11,13 @@
 // 新对话：点击 ⟳ → 清空聊天记录，保持窗口打开。
 // ============================================================
 
+var __usaInjected;
 (function () {
   'use strict';
 
   // 防止重复注入（scripting/多框架等场景）
-  if (window.__universalSubAgentInjected) return;
-  window.__universalSubAgentInjected = true;
+  if (__usaInjected) return;
+  __usaInjected = true;
 
   // ---------- 1. 创建 Shadow DOM 宿主（页面生命周期内持久存在） ----------
   const host = document.createElement('div');
@@ -63,6 +64,7 @@
     }
 
     .usa-selected {
+      flex: 0 0 auto;
       padding: 10px 12px; font-size: 13px; line-height: 1.5; color: #424247;
       background: rgba(0,0,0,0.03);
       border-bottom: 1px solid rgba(0,0,0,0.06);
@@ -133,7 +135,29 @@
     /* 小窗顶部克隆进来的公式：解除 -webkit-box 行截断对块级公式的裁剪 */
     .usa-selected .katex-display { display: block; -webkit-line-clamp: initial; margin: 4px 0; }
 
+    /* 公式展示区：解除行截断、避免自动换行破坏公式排版 */
+    .usa-selected.usa-has-math {
+      display: block;
+      -webkit-line-clamp: initial;
+      overflow: visible;
+      white-space: normal;
+    }
+    .usa-selected.usa-has-math .katex,
+    .usa-selected.usa-has-math .katex-html,
+    .usa-selected.usa-has-math .MathJax,
+    .usa-selected.usa-has-math mjx-container {
+      white-space: nowrap;
+      word-break: normal;
+    }
+    .usa-selected.usa-has-math .katex-display,
+    .usa-selected.usa-has-math mjx-container[display="true"] {
+      display: block;
+      overflow-x: auto;
+      margin: 4px 0;
+    }
+
     .usa-input-row {
+      flex: 0 0 auto;
       display: flex; gap: 8px; padding: 10px 12px;
       border-top: 1px solid rgba(0,0,0,0.06); background: rgba(255,255,255,0.55);
     }
@@ -206,6 +230,80 @@
     }
     .usa-set-default:hover { color: #f0b400; }
     .usa-set-default.is-default { color: #f0b400; }
+
+    /* —— 快捷指令区 —— */
+    .usa-prompts {
+      flex: 0 0 auto; display: flex; gap: 6px; padding: 0 12px 6px;
+      overflow-x: auto; white-space: nowrap;
+    }
+    .usa-prompts::-webkit-scrollbar { display: none; }
+    .usa-prompt-chip {
+      padding: 4px 8px; font-size: 12px; color: #5f6368;
+      background: rgba(0,0,0,0.04); border: 1px solid rgba(0,0,0,0.06);
+      border-radius: 12px; cursor: pointer; transition: all .12s ease;
+    }
+    .usa-prompt-chip:hover { background: rgba(0,0,0,0.08); color: #1f2329; border-color: rgba(0,0,0,0.12); }
+
+    /* —— 停止按钮 —— */
+    .usa-stop {
+      flex: 0 0 auto; padding: 8px 10px; font-size: 13px; font-weight: 600;
+      color: #d32f2f; background: #ffebee; border: 1px solid #ffcdd2; border-radius: 8px;
+      cursor: pointer; transition: background .12s ease;
+      display: none; align-items: center; justify-content: center;
+    }
+    .usa-stop:hover { background: #ffcdd2; }
+
+    /* —— 自适应 Textarea —— */
+    textarea.usa-input {
+      resize: none; overflow: hidden; height: 36px; max-height: 120px;
+    }
+
+    
+    /* —— AI 工具栏 (复制/导出) —— */
+    .usa-ai-toolbar {
+      display: flex; gap: 8px; margin-top: 8px;
+      opacity: 0; transition: opacity .15s ease;
+    }
+    .usa-msg-ai:hover .usa-ai-toolbar { opacity: 1; }
+    .usa-copy-btn {
+      display: flex; align-items: center; gap: 4px;
+      padding: 4px 8px; font-size: 11px; color: #5f6368;
+      background: rgba(0,0,0,0.04); border: 1px solid rgba(0,0,0,0.06);
+      border-radius: 4px; cursor: pointer; transition: all .1s ease;
+    }
+    .usa-copy-btn:hover { background: rgba(0,0,0,0.08); color: #1f2329; }
+    @media (prefers-color-scheme: dark) {
+      .usa-copy-btn { background: rgba(255,255,255,0.05); border-color: rgba(255,255,255,0.1); color: #a1a6b0; }
+      .usa-copy-btn:hover { background: rgba(255,255,255,0.1); color: #e3e5e7; }
+    }
+
+    /* —— 深色模式适配 —— */
+    @media (prefers-color-scheme: dark) {
+      .usa-dialog { background: rgba(31,35,41,0.85); border-color: rgba(255,255,255,0.1); }
+      .usa-btn { background: rgba(31,35,41,0.85); color: #e3e5e7; border-color: rgba(255,255,255,0.1); }
+      .usa-selected { background: rgba(255,255,255,0.05); color: #a1a6b0; border-color: rgba(255,255,255,0.1); }
+      .usa-msg-user { background: rgba(79,140,240,0.2); color: #e3e5e7; }
+      .usa-msg-ai { color: #e3e5e7; }
+      .usa-msg-ai h1, .usa-msg-ai h2, .usa-msg-ai h3, .usa-msg-ai h4, .usa-msg-ai h5, .usa-msg-ai h6 { color: #e3e5e7; }
+      .usa-input-row { background: rgba(31,35,41,0.6); border-color: rgba(255,255,255,0.1); }
+      .usa-input { background: rgba(255,255,255,0.05); color: #e3e5e7; border-color: rgba(255,255,255,0.1); }
+      .usa-input:focus { border-color: #4f8cf0; }
+      .usa-dragbar { background: rgba(255,255,255,0.05); border-color: rgba(255,255,255,0.1); }
+      .usa-dragdot { background: rgba(255,255,255,0.2); }
+      .usa-newchat, .usa-close { color: #8a8f99; }
+      .usa-newchat:hover, .usa-close:hover { color: #e3e5e7; background: rgba(255,255,255,0.1); }
+      .usa-provider-sel { color: #a1a6b0; }
+      .usa-provider-sel:hover { border-color: rgba(255,255,255,0.2); }
+      .usa-provider-sel option { background: #1f2329; color: #e3e5e7; }
+      .usa-prompt-chip { background: rgba(255,255,255,0.05); border-color: rgba(255,255,255,0.1); color: #a1a6b0; }
+      .usa-prompt-chip:hover { background: rgba(255,255,255,0.1); color: #e3e5e7; border-color: rgba(255,255,255,0.2); }
+      .usa-stop { background: rgba(211,47,47,0.2); border-color: rgba(211,47,47,0.4); color: #ff8a80; }
+      .usa-stop:hover { background: rgba(211,47,47,0.3); }
+      .usa-chat:empty::before { color: #70757e; }
+      .usa-code { background: #131518; border: 1px solid rgba(255,255,255,0.05); }
+      .usa-code-inline { background: rgba(255,255,255,0.1); color: #ff8a80; }
+      .usa-msg-ai blockquote { border-color: rgba(255,255,255,0.2); color: #a1a6b0; }
+    }
   `;
 
   // 持久层：style + 划词小按钮（对话框不在此层，按需创建/销毁）
@@ -229,9 +327,16 @@
       </div>
       <div class="usa-selected"></div>
       <div class="usa-chat"></div>
+      <div class="usa-prompts">
+        <button class="usa-prompt-chip">翻译为中文</button>
+        <button class="usa-prompt-chip">详细解释</button>
+        <button class="usa-prompt-chip">总结摘要</button>
+        <button class="usa-prompt-chip">优化代码</button>
+      </div>
       <div class="usa-input-row">
-        <input class="usa-input" type="text" placeholder="针对这段文字提问（留空=自动解释）…" />
+        <textarea class="usa-input" rows="1" placeholder="针对这段文字提问（Shift+Enter换行）…"></textarea>
         <button class="usa-send">发送</button>
+        <button class="usa-stop" title="停止生成">⏸️</button>
       </div>
     </div>
   `;
@@ -259,12 +364,36 @@
     { left: '\\(', right: '\\)', display: false }
   ];
   const KA_IGNORED = ['script', 'noscript', 'style', 'textarea', 'pre', 'code'];
+  // 中文常出现在 AI 返回的公式里（如 "$当 x>0 时$"），这会让 KaTeX 报
+  // unicodeTextInMathMode 警告；勾选/叉号等 Unicode 图标（✓、❌）会报
+  // unknownSymbol。两者都忽略，保留其他 strict 提示。
+  const KA_OPTIONS = {
+    delimiters: KA_DELIMS,
+    throwOnError: false,
+    ignoredTags: KA_IGNORED,
+    strict: (code) => (code === 'unicodeTextInMathMode' || code === 'unknownSymbol') ? 'ignore' : 'warn'
+  };
+
+  // KaTeX 对字体中不存在的 Unicode 字符还会额外打印 "No character metrics ..."
+  // 警告（见 KaTeX issue #3720），strict 选项无法关闭。这里在调用渲染时临时过滤
+  // 该警告，避免 AI 气泡里出现勾选/叉号等符号时控制台被刷屏。
+  function renderMathInElementSafe(el, options) {
+    if (typeof window.renderMathInElement !== 'function') return;
+    const origWarn = console.warn;
+    console.warn = function (...args) {
+      const s = args.join(' ');
+      if (/No character metrics for .* in style '[^']+' and mode '[^']+'/.test(s)) return;
+      return origWarn.apply(console, args);
+    };
+    try {
+      window.renderMathInElement(el, options);
+    } finally {
+      console.warn = origWarn;
+    }
+  }
 
   // 上下文失效检测
   let dead = false;
-  function contextValid() {
-    try { return !!chrome.runtime?.id; } catch (_) { return false; }
-  }
   function selfDestruct() {
     if (dead) return;
     dead = true;
@@ -274,9 +403,7 @@
     globalDragTarget = null;
     if (host && host.parentNode) host.remove();
   }
-  const ctxCheckTimer = setInterval(() => {
-    if (!contextValid()) { clearInterval(ctxCheckTimer); selfDestruct(); }
-  }, 2000);
+
 
   // ---------- 2.5 KaTeX 公式引擎（本地打包，由 manifest content_scripts 注入） ----------
   let katexReady = false;
@@ -338,33 +465,7 @@
     return /^[\d][\d.,\s%$]*$/.test(s);
   }
 
-  function renderInline(text) {
-    const maths = [];
-    const codes = [];
-    let raw = text;
-    raw = raw.replace(/`([^`\n]+)`/g, (_, c) => { codes.push(c); return '\u0001' + (codes.length - 1) + '\u0001'; });
-    raw = raw.replace(/\$\$([^$]+)\$\$/g,    (_, m) => { maths.push({ d: true,  t: m }); return '\u0002' + (maths.length - 1) + '\u0002'; });
-    raw = raw.replace(/\\\[([\s\S]+?)\\\]/g,  (_, m) => { maths.push({ d: true,  t: m }); return '\u0002' + (maths.length - 1) + '\u0002'; });
-    raw = raw.replace(/\\\(([\s\S]+?)\\\)/g,  (_, m) => { maths.push({ d: false, t: m }); return '\u0002' + (maths.length - 1) + '\u0002'; });
-    raw = raw.replace(/\$([^$\n]+)\$/g,       (_, m) => {
-      if (looksLikeCurrency(m)) return '$' + m + '$';   // 货币等纯数字 → 不当作公式
-      maths.push({ d: false, t: m }); return '\u0002' + (maths.length - 1) + '\u0002';
-    });
-
-    let t = escapeHtml(raw);
-    t = t.replace(/\u0001(\d+)\u0001/g, (_, n) => '<code class="usa-code-inline">' + escapeHtml(codes[+n]) + '</code>');
-    t = t.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
-    t = t.replace(/__([^_]+)__/g, '<strong>$1</strong>');
-    t = t.replace(/(^|[^*])\*([^*\n]+)\*/g, '$1<em>$2</em>');
-    t = t.replace(/(^|[^_])_([^_\n]+)_/g, '$1<em>$2</em>');
-    t = t.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)"<>]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
-    t = t.replace(/\u0002(\d+)\u0002/g, (_, n) => {
-      const m = maths[+n];
-      const esc = escapeHtml(m.t);
-      return m.d ? '$$' + esc + '$$' : '\\(' + esc + '\\)';
-    });
-    return t;
-  }
+// renderInline removed, using marked.js instead
 
   // 仅渲染公式（不解释 * _ ` 等 Markdown），用于「选中文字」展示区，
   // 避免把用户选中的普通文本里的 * _ 当成格式符号。公式用 KaTeX 重绘。
@@ -390,92 +491,60 @@
 
   function renderMarkdown(md) {
     if (!md) return '';
-    const lines = md.replace(/\r\n/g, '\n').split('\n');
-    const out = [];
-    let listOpen = false, olOpen = false;
-    let para = [];
-    let inCode = false, codeBuf = [];
-    let inMath = false, mathBuf = [];
-    let inBracketMath = false, bracketMathBuf = [];
+    if (typeof marked === 'undefined') return escapeHtml(md);
 
-    const closeList = () => { if (listOpen) { out.push('</ul>'); listOpen = false; } if (olOpen) { out.push('</ol>'); olOpen = false; } };
-    const flushPara = () => { if (para.length) { out.push('<p>' + para.map(renderInline).join('<br>') + '</p>'); para = []; } };
+    // 保护公式不被 marked 解析为普通文本或引起格式错乱
+    const maths = [];
+    let processed = md;
+    
+    // 替换块级公式
+    processed = processed.replace(/\$\$(.*?)\$\$/gs, (_, m) => {
+      maths.push('$$' + m + '$$');
+      return `__USA_MATH_${maths.length - 1}__`;
+    });
+    processed = processed.replace(/\\\[(.*?)\\\]/gs, (_, m) => {
+      maths.push('\\[' + m + '\\]');
+      return `__USA_MATH_${maths.length - 1}__`;
+    });
+    
+    // 替换行内公式
+    processed = processed.replace(/\\\((.*?)\\\)/gs, (_, m) => {
+      maths.push('\\(' + m + '\\)');
+      return `__USA_MATH_${maths.length - 1}__`;
+    });
+    processed = processed.replace(/\$([^$\n]+)\$/g, (_, m) => {
+      if (looksLikeCurrency(m)) return '$' + m + '$';
+      maths.push('$' + m + '$');
+      return `__USA_MATH_${maths.length - 1}__`;
+    });
 
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i];
+    // Marked 解析
+    let html = marked.parse(processed, { breaks: true, gfm: true });
 
-      if (inBracketMath) {
-        const endIdx = line.indexOf('\\]');
-        if (endIdx >= 0) {
-          const before = line.slice(0, endIdx);
-          if (before.trim()) bracketMathBuf.push(before);
-          flushPara(); closeList();
-          out.push('<div class="usa-math-block">\\[' + escapeHtml(bracketMathBuf.join('\n')) + '\\]</div>');
-          bracketMathBuf = []; inBracketMath = false;
-          const after = line.slice(endIdx + 2);
-          if (after.trim()) para.push(after);
-        } else {
-          bracketMathBuf.push(line);
-        }
-        continue;
+    // 还原公式
+    html = html.replace(/__USA_MATH_(\d+)__/g, (_, i) => {
+      const m = maths[parseInt(i, 10)];
+      if (m.startsWith('$$') || m.startsWith('\\[')) {
+        return `<div class="usa-math-block">${escapeHtml(m)}</div>`;
       }
+      return escapeHtml(m);
+    });
 
-      if (/^\s*\$\$\s*$/.test(line)) {
-        if (inMath) {
-          flushPara(); closeList();
-          out.push('<div class="usa-math-block">$$' + escapeHtml(mathBuf.join('\n')) + '$$</div>');
-          mathBuf = []; inMath = false;
-        } else {
-          flushPara(); closeList(); inMath = true;
-        }
-        continue;
-      }
-      if (inMath) { mathBuf.push(line); continue; }
-
-      if (/^```/.test(line)) {
-        if (inCode) {
-          out.push('<pre class="usa-code"><code>' + escapeHtml(codeBuf.join('\n')) + '</code></pre>');
-          codeBuf = []; inCode = false;
-        } else {
-          flushPara(); closeList(); inCode = true;
-        }
-        continue;
-      }
-      if (inCode) { codeBuf.push(line); continue; }
-
-      const startMatch = line.match(/^((?:[^`]|`[^`]*`)*?)\\\[/);
-      if (startMatch) {
-        const afterBracket = line.slice(startMatch[0].length);
-        const endInRest = afterBracket.match(/^((?:[^`]|`[^`]*`)*?)\\\]/);
-        if (!endInRest) {
-          const before = startMatch[1];
-          if (before.trim()) para.push(before);
-          flushPara(); closeList();
-          inBracketMath = true;
-          bracketMathBuf = [];
-          if (afterBracket.trim()) bracketMathBuf.push(afterBracket);
-          continue;
-        }
-      }
-
-      if (/^\s*$/.test(line)) { closeList(); flushPara(); continue; }
-
-      let m;
-      if ((m = line.match(/^(#{1,6})\s+(.*)$/))) { closeList(); flushPara(); const n = m[1].length; out.push('<h' + n + '>' + renderInline(m[2]) + '</h' + n + '>'); continue; }
-      if ((m = line.match(/^>\s?(.*)$/))) { closeList(); flushPara(); out.push('<blockquote>' + renderInline(m[1]) + '</blockquote>'); continue; }
-      if ((m = line.match(/^[-*]\s+(.*)$/))) { flushPara(); if (!listOpen) { out.push('<ul>'); listOpen = true; } out.push('<li>' + renderInline(m[1]) + '</li>'); continue; }
-      if ((m = line.match(/^\d+\.\s+(.*)$/))) { flushPara(); if (!olOpen) { out.push('<ol>'); olOpen = true; } out.push('<li>' + renderInline(m[1]) + '</li>'); continue; }
-
-      closeList();
-      para.push(line);
+    if (typeof DOMPurify !== 'undefined') {
+      html = DOMPurify.sanitize(html, {
+        ADD_ATTR: ['target'] // 允许 target="_blank"
+      });
     }
 
-    if (inMath) out.push('<div class="usa-math-block">$$' + escapeHtml(mathBuf.join('\n')) + '$$</div>');
-    if (inBracketMath) out.push('<div class="usa-math-block">\\[' + escapeHtml(bracketMathBuf.join('\n')) + '\\]</div>');
-    if (inCode) out.push('<pre class="usa-code"><code>' + escapeHtml(codeBuf.join('\n')) + '</code></pre>');
-    closeList();
-    flushPara();
-    return out.join('\n');
+    // 给 code block 添加样式
+    html = html.replace(/<pre><code/g, '<pre class="usa-code"><code');
+    html = html.replace(/<code>/g, '<code class="usa-code-inline">');
+    html = html.replace(/<code class="usa-code-inline">([^<]+)<\/code>/g, (match, p1) => {
+      // 避免把 <pre> 里的 code 也加上 inline class
+      return match; // 简单处理：CSS 会通过 .usa-code code { background: none } 覆盖
+    });
+    
+    return html;
   }
 
   // ---------- 4. 选区工具 ----------
@@ -519,7 +588,22 @@
       const anno = container.querySelector('annotation[encoding="application/x-tex"]');
       if (anno && anno.textContent && anno.textContent.trim()) {
         const tex = anno.textContent.trim();
-        return { tex: tex, display: tex.indexOf('\n') >= 0, raw: false };
+        // 判断 display 模式：块级公式外层有 .katex-display（auto-render 渲染 $$...$$ / \[...\] 时生成）。
+        // 旧实现用 tex.indexOf('\n') 判断，单行块公式（如 $$\frac{a}{b}$$）TeX 不含换行会被误判为行内，
+        // 导致嵌套小窗里块公式以行内样式重绘（分式/求和变小、上下限移到角标），格式错乱。
+        // 正确做法：从容器向上找 .katex-display 祖先。
+        let isDisplay = false;
+        let cur = container.parentElement;
+        let hops = 0;
+        while (cur && cur.nodeType === Node.ELEMENT_NODE && hops < 4) {
+          const cls = (typeof cur.getAttribute === 'function' ? (cur.getAttribute('class') || '') : '');
+          if (/\bkatex-display\b/.test(cls)) { isDisplay = true; break; }
+          // 遇到另一个 .katex（理论上不会出现，保险）则停止，避免误判外层
+          if (hops > 0 && /\bkatex\b/.test(cls)) break;
+          cur = cur.parentElement;
+          hops++;
+        }
+        return { tex: tex, display: isDisplay, raw: false };
       }
     } catch (_) {}
     // 2) MathJax v2/v3：<script type="math/tex"> / type="math/tex; mode=display">
@@ -540,6 +624,46 @@
     return null;
   }
 
+  // 获取公式容器的“可见文本”（排除隐藏源码标注 / MathJax script），
+  // 用于判断用户是否把整个公式都选中了。
+  function getMathVisualText(container) {
+    try {
+      const clone = container.cloneNode(true);
+      clone.querySelectorAll('annotation[encoding="application/x-tex"], .katex-mathml, script[type^="math/"]').forEach(function (el) { el.remove(); });
+      return (clone.textContent || '').replace(/[\r\n]+/g, ' ').replace(/\s{2,}/g, ' ').trim();
+    } catch (_) {
+      return '';
+    }
+  }
+
+  // 判断选区是否覆盖了整个公式容器。
+  // 主判断用「选区文本 === 公式完整可视文本」；面积比例仅作兜底。
+  // 旧实现优先用面积比例（≥0.95），但单行公式高度恒匹配，宽度阈值 0.95 会让
+  // 「选中长公式 96%」被误判为全选，从而提取整段公式源码发给 AI，
+  // 用户无法针对公式的某一部分直接提问。改用文本判断可精确区分「全选」与「大部分选中」。
+  // KaTeX 的 .katex-mathml 用 clip + absolute 隐藏，鼠标拖选不会覆盖，
+  // 故 sel.toString() 与可视文本一致；仅当文本不可用（如 visText 为空）才退回面积兜底。
+  function isFullMathSelection(sel, container) {
+    // 1) 文本判断（主）：选区文本必须等于公式完整可视文本
+    try {
+      const selText = (sel.toString() || '').replace(/[\r\n]+/g, ' ').replace(/\s{2,}/g, ' ').trim();
+      const visText = getMathVisualText(container);
+      if (selText.length > 0 && visText.length > 0) {
+        return selText === visText;
+      }
+    } catch (_) {}
+    // 2) 面积判断（兜底）：仅当文本不可用时（如 visText 提取失败）才用
+    try {
+      const range = sel.getRangeAt(0);
+      const sRect = range.getBoundingClientRect();
+      const cRect = container.getBoundingClientRect();
+      if (sRect.width > 0 && sRect.height > 0 && cRect.width > 0 && cRect.height > 0) {
+        return (sRect.width / cRect.width) >= 0.95 && (sRect.height / cRect.height) >= 0.95;
+      }
+    } catch (_) {}
+    return false;
+  }
+
   // 若选区落在某个公式渲染容器内，返回用 $...$ / $$...$$ 包裹的干净源码；否则 null。
   function extractMathSource(sel) {
     try {
@@ -553,6 +677,7 @@
       const mStart = closestMathContainer(sEl);
       const mEnd = closestMathContainer(eEl);
       if (!mStart || !mEnd || mStart !== mEnd) return null;   // 必须同一个公式
+      if (!isFullMathSelection(sel, mStart)) return null;       // 仅当选中整个公式时才取完整源码
       const info = extractTexFromMathContainer(mStart);
       if (!info || !info.tex) return null;
       if (info.raw) return info.tex;                          // asciimath 等：原样返回
@@ -585,6 +710,7 @@
       const mStart = closestMathContainer(sEl);
       const mEnd = closestMathContainer(eEl);
       if (!mStart || !mEnd || mStart !== mEnd) return null;  // 必须同一个公式
+      if (!isFullMathSelection(sel, mStart)) return null;       // 部分选中时只把选中的文字当普通文本
       return mStart;
     } catch (_) {
       return null;
@@ -966,7 +1092,7 @@
 
     // ---- 实例私有状态 ----
     let dialog = null, selectedArea = null, chatArea = null;
-    let inputEl = null, sendBtn = null, closeBtn = null, newChatBtn = null;
+    let inputEl = null, sendBtn = null, stopBtn = null, closeBtn = null, newChatBtn = null;
     let winNumEl = null, providerSel = null;
     let currentRequestId = null;
     let answerRaw = '';
@@ -975,6 +1101,9 @@
     let watchdogTimer = null;
     let currentProvider = 'deepseek';
     let savedDefaultProvider = 'deepseek';
+    // 打开窗口时记录的选区位置（视口坐标），用于 AI 回复后自动避开覆盖原文选区
+    let anchorRect = null;
+    let userDragged = false;
 
     // 多轮对话状态
     let chatHistory = [];
@@ -995,11 +1124,7 @@
       }
       ensureKaTeX();
       try {
-        renderMathInElement(currentAIBubble, {
-          delimiters: KA_DELIMS,
-          throwOnError: false,
-          ignoredTags: KA_IGNORED
-        });
+        renderMathInElementSafe(currentAIBubble, KA_OPTIONS);
       } catch (e) {
         console.error('[Universal Sub-Agent] KaTeX 渲染失败:', e);
       }
@@ -1013,6 +1138,7 @@
         if (!currentAIBubble) return;
         currentAIBubble.innerHTML = renderMarkdown(answerRaw);
         renderMath();
+        avoidCoveringSelection();
       });
     }
 
@@ -1021,14 +1147,15 @@
       watchdogTimer = setTimeout(() => {
         if (!dialog || !currentAIBubble) return;
         if (!currentAIBubble.classList.contains('usa-loading')) return;
-        if (sendBtn) sendBtn.disabled = false;
+        if (sendBtn) { sendBtn.disabled = false; sendBtn.style.display = 'inline-flex'; }
+      if (stopBtn) stopBtn.style.display = 'none';
         currentAIBubble.classList.remove('usa-loading');
         currentAIBubble.textContent =
           '未收到响应。请按顺序排查：\n' +
           '1) 点击扩展图标 → 设置，确认已填写正确的 API Key 并选择对应厂商；\n' +
           '2) 在 chrome://extensions 找到本扩展，点击刷新图标重新加载；\n' +
           '3) 点击扩展卡片上的"service worker"链接，查看后台控制台的报错日志。';
-      }, 20000);
+      }, 90000);
     }
 
     function clearWatchdog() {
@@ -1043,6 +1170,9 @@
     }
 
     function closeDialog() {
+      // 取消正在飞行的请求
+      const reqId = currentRequestId;
+      if (reqId) { try { chrome.runtime.sendMessage({ type: 'CANCEL_REQUEST', requestId: reqId }, () => { void chrome.runtime.lastError; }); } catch (_) {} }
       currentRequestId = null;
       answerRaw = '';
       renderPending = false;
@@ -1053,12 +1183,14 @@
       pendingUserQuestion = '';
       savedDefaultProvider = 'deepseek';
       if (dialog) { dialog.remove(); dialog = null; }
-      selectedArea = chatArea = inputEl = sendBtn = closeBtn = newChatBtn = winNumEl = providerSel = null;
+      selectedArea = chatArea = inputEl = sendBtn = stopBtn = closeBtn = newChatBtn = winNumEl = providerSel = null;
       removeFromManager();
     }
 
     // 销毁（仅清理 JS 状态，不移除 DOM — 供 selfDestruct 使用）
     function destroy() {
+      const reqId = currentRequestId;
+      if (reqId) { try { chrome.runtime.sendMessage({ type: 'CANCEL_REQUEST', requestId: reqId }, () => { void chrome.runtime.lastError; }); } catch (_) {} }
       currentRequestId = null;
       answerRaw = '';
       renderPending = false;
@@ -1068,10 +1200,12 @@
       currentAIBubble = null;
       pendingUserQuestion = '';
       savedDefaultProvider = 'deepseek';
-      dialog = selectedArea = chatArea = inputEl = sendBtn = closeBtn = newChatBtn = winNumEl = providerSel = null;
+      dialog = selectedArea = chatArea = inputEl = sendBtn = stopBtn = closeBtn = newChatBtn = winNumEl = providerSel = null;
     }
 
     function newChat() {
+      const reqId = currentRequestId;
+      if (reqId) { try { chrome.runtime.sendMessage({ type: 'CANCEL_REQUEST', requestId: reqId }, () => { void chrome.runtime.lastError; }); } catch (_) {} }
       chatHistory = [];
       currentAIBubble = null;
       pendingUserQuestion = '';
@@ -1080,14 +1214,17 @@
       renderPending = false;
       clearWatchdog();
       if (chatArea) chatArea.innerHTML = '';
-      if (inputEl) { inputEl.value = ''; inputEl.focus(); }
-      if (sendBtn) sendBtn.disabled = false;
+      if (inputEl) { inputEl.value = '';
+      inputEl.style.height = '36px'; inputEl.focus(); }
+      if (sendBtn) { sendBtn.disabled = false; sendBtn.style.display = 'inline-flex'; }
+      if (stopBtn) stopBtn.style.display = 'none';
     }
 
     function send() {
       if (dead || !dialog) return;
       const userQuestion = inputEl.value.trim() || '详细解释划选部分的文字';
       inputEl.value = '';
+      inputEl.style.height = '36px';
 
       const userBubble = document.createElement('div');
       userBubble.className = 'usa-msg-user';
@@ -1107,12 +1244,17 @@
       currentRequestId = requestId;
       answerRaw = '';
       sendBtn.disabled = true;
+      sendBtn.style.display = 'none';
+      stopBtn.style.display = 'inline-flex';
 
       try {
         chrome.runtime.sendMessage(
           { type: 'ASK_AI', provider: currentProvider, selectedText: selectedText, userQuestion: userQuestion, pageContext: pageContext, chatHistory: chatHistory, requestId: requestId, selectionContext: currentSelectionCtx },
           () => {
             if (chrome.runtime.lastError) {
+              if (chrome.runtime.lastError.message.includes('Extension context invalidated')) {
+                selfDestruct();
+              }
               if (!sendBtn || !currentAIBubble) return;
               clearWatchdog();
               sendBtn.disabled = false;
@@ -1122,8 +1264,12 @@
           }
         );
       } catch (err) {
+        if (err.message.includes('Extension context invalidated')) {
+          selfDestruct();
+        }
         clearWatchdog();
-        if (sendBtn) sendBtn.disabled = false;
+        if (sendBtn) { sendBtn.disabled = false; sendBtn.style.display = 'inline-flex'; }
+      if (stopBtn) stopBtn.style.display = 'none';
         if (currentAIBubble) {
           currentAIBubble.classList.remove('usa-loading');
           currentAIBubble.textContent = '扩展通信失败，请刷新本页后重试。';
@@ -1144,18 +1290,75 @@
     }
 
     function handleDone() {
-      if (sendBtn) sendBtn.disabled = false;
+      if (sendBtn) { sendBtn.disabled = false; sendBtn.style.display = 'inline-flex'; }
+      if (stopBtn) stopBtn.style.display = 'none';
       renderPending = false;
       if (!currentAIBubble) return;
       if (!answerRaw) { currentAIBubble.textContent = '（回答为空）'; }
       else { currentAIBubble.innerHTML = renderMarkdown(answerRaw); renderMath(); }
       chatHistory.push({ role: 'user', content: pendingUserQuestion });
-      chatHistory.push({ role: 'assistant', content: answerRaw });
+            chatHistory.push({ role: 'assistant', content: answerRaw });
+      // 保留最近 20 轮对话（40 条消息），防止上下文窗口溢出导致请求失败
+      if (chatHistory.length > 40) chatHistory = chatHistory.slice(-40);
+      const node = currentAIBubble;
+      const rawContent = answerRaw;
+
+      // 插入复制工具栏
+      if (node && rawContent) {
+        const toolbar = document.createElement('div');
+        toolbar.className = 'usa-ai-toolbar';
+        toolbar.innerHTML = `
+          <button class="usa-copy-btn usa-copy-text" title="复制纯文本">📋 复制</button>
+          <button class="usa-copy-btn usa-copy-md" title="复制 Markdown">📄 Markdown</button>
+        `;
+        toolbar.querySelector('.usa-copy-text').addEventListener('click', (e) => {
+          e.stopPropagation();
+          let textToCopy = node.innerText;
+          textToCopy = textToCopy.replace('📋 复制\n📄 Markdown', '').trim();
+          navigator.clipboard.writeText(textToCopy).then(() => {
+            const btn = toolbar.querySelector('.usa-copy-text');
+            btn.textContent = '✅ 已复制';
+            setTimeout(() => btn.textContent = '📋 复制', 2000);
+          });
+        });
+        toolbar.querySelector('.usa-copy-md').addEventListener('click', (e) => {
+          e.stopPropagation();
+          navigator.clipboard.writeText(rawContent).then(() => {
+            const btn = toolbar.querySelector('.usa-copy-md');
+            btn.textContent = '✅ 已复制';
+            setTimeout(() => btn.textContent = '📄 Markdown', 2000);
+          });
+        });
+        node.appendChild(toolbar);
+      }
+
+      // 保存到本地历史记录
+      chrome.storage.local.get(['chatHistoryList'], (data) => {
+        let list = data.chatHistoryList || [];
+        const chatItem = {
+          id: inst.id,
+          date: Date.now(),
+          url: window.location.href,
+          title: document.title,
+          summary: pendingUserQuestion.slice(0, 30) + (pendingUserQuestion.length > 30 ? '...' : ''),
+          messages: chatHistory
+        };
+        const idx = list.findIndex(item => item.id === inst.id);
+        if (idx >= 0) list[idx] = chatItem;
+        else list.unshift(chatItem);
+        
+        if (list.length > 100) list = list.slice(0, 100);
+        chrome.storage.local.set({ chatHistoryList: list });
+      });
+
+
       currentAIBubble = null;
+      avoidCoveringSelection();
     }
 
     function handleError(msg) {
-      if (sendBtn) sendBtn.disabled = false;
+      if (sendBtn) { sendBtn.disabled = false; sendBtn.style.display = 'inline-flex'; }
+      if (stopBtn) stopBtn.style.display = 'none';
       if (!currentAIBubble) return;
       currentAIBubble.classList.remove('usa-loading');
       currentAIBubble.textContent = '出错了：' + (msg.error || '未知错误');
@@ -1188,6 +1391,8 @@
       chatArea = dlg.querySelector('.usa-chat');
       inputEl = dlg.querySelector('.usa-input');
       sendBtn = dlg.querySelector('.usa-send');
+      stopBtn = dlg.querySelector('.usa-stop');
+      const promptChips = dlg.querySelectorAll('.usa-prompt-chip');
       closeBtn = dlg.querySelector('.usa-close');
       newChatBtn = dlg.querySelector('.usa-newchat');
       winNumEl = dlg.querySelector('.usa-win-num');
@@ -1231,10 +1436,104 @@
         const rect = dialog.getBoundingClientRect();
         dragState = { offX: e.clientX - rect.left, offY: e.clientY - rect.top };
         globalDragTarget = inst;
+        userDragged = true; // 用户手动拖拽后，不再自动调整位置
         e.preventDefault();
       });
-      sendBtn.addEventListener('click', send);
-      inputEl.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); send(); } });
+            sendBtn.addEventListener('click', send);
+      stopBtn.addEventListener('click', () => {
+        if (currentRequestId) {
+          try { chrome.runtime.sendMessage({ type: 'CANCEL_REQUEST', requestId: currentRequestId }, () => { void chrome.runtime.lastError; }); } catch (_) {}
+          stopBtn.style.display = 'none';
+          sendBtn.style.display = 'inline-flex';
+          sendBtn.disabled = false;
+          clearWatchdog();
+          if (currentAIBubble) {
+            currentAIBubble.classList.remove('usa-loading');
+            if (answerRaw) {
+               answerRaw += '\n\n[已由用户中止]';
+               currentAIBubble.innerHTML = renderMarkdown(answerRaw);
+               renderMath();
+            } else {
+               currentAIBubble.textContent = '[已由用户中止]';
+            }
+            chatHistory.push({ role: 'user', content: pendingUserQuestion });
+                        chatHistory.push({ role: 'assistant', content: answerRaw || '[已由用户中止]' });
+            const node = currentAIBubble;
+            const rawContent = answerRaw || '[已由用户中止]';
+
+      // 插入复制工具栏
+      if (node && rawContent) {
+        const toolbar = document.createElement('div');
+        toolbar.className = 'usa-ai-toolbar';
+        toolbar.innerHTML = `
+          <button class="usa-copy-btn usa-copy-text" title="复制纯文本">📋 复制</button>
+          <button class="usa-copy-btn usa-copy-md" title="复制 Markdown">📄 Markdown</button>
+        `;
+        toolbar.querySelector('.usa-copy-text').addEventListener('click', (e) => {
+          e.stopPropagation();
+          let textToCopy = node.innerText;
+          textToCopy = textToCopy.replace('📋 复制\n📄 Markdown', '').trim();
+          navigator.clipboard.writeText(textToCopy).then(() => {
+            const btn = toolbar.querySelector('.usa-copy-text');
+            btn.textContent = '✅ 已复制';
+            setTimeout(() => btn.textContent = '📋 复制', 2000);
+          });
+        });
+        toolbar.querySelector('.usa-copy-md').addEventListener('click', (e) => {
+          e.stopPropagation();
+          navigator.clipboard.writeText(rawContent).then(() => {
+            const btn = toolbar.querySelector('.usa-copy-md');
+            btn.textContent = '✅ 已复制';
+            setTimeout(() => btn.textContent = '📄 Markdown', 2000);
+          });
+        });
+        node.appendChild(toolbar);
+      }
+
+      // 保存到本地历史记录
+      chrome.storage.local.get(['chatHistoryList'], (data) => {
+        let list = data.chatHistoryList || [];
+        const chatItem = {
+          id: inst.id,
+          date: Date.now(),
+          url: window.location.href,
+          title: document.title,
+          summary: pendingUserQuestion.slice(0, 30) + (pendingUserQuestion.length > 30 ? '...' : ''),
+          messages: chatHistory
+        };
+        const idx = list.findIndex(item => item.id === inst.id);
+        if (idx >= 0) list[idx] = chatItem;
+        else list.unshift(chatItem);
+        
+        if (list.length > 100) list = list.slice(0, 100);
+        chrome.storage.local.set({ chatHistoryList: list });
+      });
+
+
+            currentAIBubble = null;
+          }
+          currentRequestId = null;
+          renderPending = false;
+        }
+      });
+      promptChips.forEach(chip => {
+        chip.addEventListener('click', (e) => {
+          e.stopPropagation();
+          inputEl.value = chip.textContent;
+          send();
+        });
+      });
+      inputEl.addEventListener('input', () => {
+        inputEl.style.height = '36px';
+        const h = Math.min(inputEl.scrollHeight, 120);
+        inputEl.style.height = h + 'px';
+      });
+      inputEl.addEventListener('keydown', (e) => { 
+        if (e.key === 'Enter' && !e.shiftKey) { 
+           e.preventDefault(); 
+           send(); 
+        } 
+      });
     }
 
     function loadProviders(setDefaultBtn) {
@@ -1286,43 +1585,89 @@
       chatHistory = [];
       currentAIBubble = null;
       pendingUserQuestion = '';
-      // 小窗顶部展示「选中内容」：
-      // 1) 若选区落在某个真实公式渲染元素内（currentMathElement），直接克隆该元素——
-      //    无论渲染器是否保留了源码标注（KaTeX html-only / MathJax v3 去脚本 等），
-      //    都能原样、正确地显示公式，无需重新提取/重绘源码。
+      // 1) 若选区落在某个真实公式渲染元素内（currentMathElement）：
+      //    优先提取源码交给 KaTeX 重绘，这样嵌套小窗里也不会被页面/克隆层样式带偏；
+      //    无源码时（KaTeX html-only / MathJax v3 去脚本）再原样克隆。
       // 2) 兜底：用 renderMathOnly 处理纯文本里的 $...$ / $$...$$，再交给 KaTeX 重绘。
       try {
         if (currentMathElement && typeof currentMathElement.cloneNode === 'function') {
-          const tag = (currentMathElement.tagName || '').toLowerCase();
-          const cls = currentMathElement.getAttribute('class') || '';
-          const isMathJax = /mathjax|mjx-container/i.test(tag + ' ' + cls);
-          const clone = currentMathElement.cloneNode(true);
-          clone.removeAttribute('id');            // 避免与页面 id 冲突
-          clone.removeAttribute('style');         // 重置页面可能加的内联尺寸/边距
-          selectedArea.innerHTML = '';
-          selectedArea.appendChild(clone);
-          if (isMathJax) ensureMathJaxCss();       // 克隆 mjx-container 需要 MathJax 布局样式
-          ensureKaTeX();                           // KaTeX 样式（若尚未加载）
+          const info = extractTexFromMathContainer(currentMathElement);
+          if (info && info.tex) {
+            // 有干净源码：直接用 KaTeX 重绘
+            let tex = info.tex;
+            if (!info.raw) {
+              tex = info.display ? ('$$' + tex + '$$') : ('$' + tex + '$');
+            }
+            selectedArea.innerHTML = renderMathOnly(tex);
+            if (typeof window.renderMathInElement === 'function') {
+              try { ensureKaTeX(); renderMathInElementSafe(selectedArea, KA_OPTIONS); } catch (_) {}
+            }
+          } else {
+            // 无源码：原样克隆该元素
+            const tag = (currentMathElement.tagName || '').toLowerCase();
+            const cls = currentMathElement.getAttribute('class') || '';
+            const isMathJax = /mathjax|mjx-container/i.test(tag + ' ' + cls);
+            const clone = currentMathElement.cloneNode(true);
+            clone.removeAttribute('id');            // 避免与页面 id 冲突
+            clone.removeAttribute('style');         // 重置页面可能加的内联尺寸/边距
+            selectedArea.innerHTML = '';
+            selectedArea.appendChild(clone);
+            if (isMathJax) ensureMathJaxCss();       // 克隆 mjx-container 需要 MathJax 布局样式
+            ensureKaTeX();                           // KaTeX 样式（若尚未加载）
+          }
+          selectedArea.classList.add('usa-has-math');
         } else {
           selectedArea.innerHTML = renderMathOnly(selectedText || '');
           if (typeof window.renderMathInElement === 'function') {
-            try {
-              ensureKaTeX();
-              renderMathInElement(selectedArea, { delimiters: KA_DELIMS, throwOnError: false, ignoredTags: KA_IGNORED });
-            } catch (e) { /* 渲染失败则保留纯文本 $e^2$ */ }
+            try { ensureKaTeX(); renderMathInElementSafe(selectedArea, KA_OPTIONS); } catch (e) { /* 渲染失败则保留纯文本 $e^2$ */ }
+          }
+          if (selectedArea.querySelector('.katex, .MathJax, mjx-container')) {
+            selectedArea.classList.add('usa-has-math');
           }
         }
       } catch (e) {
-        // 克隆异常 → 回退到公式重绘
+        // 克隆/渲染异常 → 回退到公式重绘
         selectedArea.innerHTML = renderMathOnly(selectedText || '');
         if (typeof window.renderMathInElement === 'function') {
-          try { ensureKaTeX(); renderMathInElement(selectedArea, { delimiters: KA_DELIMS, throwOnError: false, ignoredTags: KA_IGNORED }); } catch (_) {}
+          try { ensureKaTeX(); renderMathInElementSafe(selectedArea, KA_OPTIONS); } catch (_) {}
+        }
+        if (selectedArea.querySelector('.katex, .MathJax, mjx-container')) {
+          selectedArea.classList.add('usa-has-math');
         }
       }
       const stagger = (activeDialogs.length - 1) * 25;
       positionNearSelection(dialog, stagger, openClientX, openClientY);
+      // 记录本次选区锚点（视口坐标），用于 AI 回复后自动避开覆盖原文选区
+      const sel = window.getSelection();
+      if (sel && sel.rangeCount > 0) {
+        const r = sel.getRangeAt(0).getBoundingClientRect();
+        anchorRect = (r.width || r.height) ? r : { left: openClientX, right: openClientX + 1, top: openClientY, bottom: openClientY + 1, width: 1, height: 1 };
+      } else {
+        anchorRect = { left: openClientX, right: openClientX + 1, top: openClientY, bottom: openClientY + 1, width: 1, height: 1 };
+      }
       dialog.style.display = 'flex';
       setTimeout(() => { if (inputEl) inputEl.focus(); }, 0);
+    }
+
+    // 当 AI 回复内容增加导致窗口高度变化时，自动避开覆盖原文选区；
+    // 用户手动拖拽后不再自动调整，避免打断用户安排。
+    function avoidCoveringSelection() {
+      if (!dialog || !anchorRect || userDragged || globalDragTarget === inst) return;
+      const margin = 8;
+      const dlgRect = dialog.getBoundingClientRect();
+      // 矩形是否相交（含接触边）
+      const overlap = !(dlgRect.right <= anchorRect.left || dlgRect.left >= anchorRect.right || dlgRect.bottom <= anchorRect.top || dlgRect.top >= anchorRect.bottom);
+      if (!overlap) return;
+      // 优先移到选区下方
+      let y = anchorRect.bottom + margin + 4;
+      if (y + dlgRect.height <= window.innerHeight - margin) {
+        dialog.style.top = y + 'px';
+        return;
+      }
+      // 下方放不下，则移到选区上方
+      y = anchorRect.top - dlgRect.height - margin - 4;
+      if (y < margin) y = margin;
+      dialog.style.top = y + 'px';
     }
 
     // 实例公开接口
@@ -1372,9 +1717,15 @@
     showButton();
   });
 
+  // 选区变化时隐藏按钮（防抖：拖选过程中高频触发，80ms 收敛后仅处理最终状态）
+  let selectionChangeTimer = null;
   document.addEventListener('selectionchange', () => {
     if (dead) return;
-    if (getSelectionText().length === 0) hideButton();
+    if (selectionChangeTimer) clearTimeout(selectionChangeTimer);
+    selectionChangeTimer = setTimeout(() => {
+      selectionChangeTimer = null;
+      if (getSelectionText().length === 0) hideButton();
+    }, 80);
   });
 
   // 点击网页其他地方：仅隐藏按钮，不动对话框
@@ -1453,3 +1804,33 @@
   });
 
 })();
+
+
+  // 监听来自 popup 的全页总结请求
+  chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
+    if (msg.type === 'SUMMARIZE_PAGE') {
+      if (dead) return;
+      const text = document.body.innerText || '';
+      const truncated = text.slice(0, 50000);
+      if (!truncated.trim()) { alert('当前网页无法提取到文本。'); return; }
+      
+      const pageCtx = '【系统指令】：以下是该网页的完整文本内容。请为其提供一份结构清晰的核心要点总结（TL;DR），并准备好回答用户针对该网页内容的后续提问。\n\n' + truncated;
+      const inst = createDialogInstance('（整个网页内容已作为背景资料载入）', pageCtx);
+      activeDialogs.push(inst);
+      if (activeDialogs.length > MAX_WINDOWS) activeDialogs.shift().closeDialog();
+      updateAllDialogNumbers();
+      
+      const cx = window.innerWidth / 2 - 180;
+      const cy = window.innerHeight / 2 - 200;
+      inst.openDialog(Math.max(10, cx), Math.max(10, cy));
+      
+      setTimeout(() => {
+        const input = inst.dialog.querySelector('.usa-input');
+        if (input) {
+          input.value = '请总结这篇网页的核心内容。';
+          const btn = inst.dialog.querySelector('.usa-send');
+          if (btn) btn.click();
+        }
+      }, 300);
+    }
+  });

@@ -4,19 +4,8 @@
 // 多厂商 Key 和 Model 各自独立存储，切换厂商自动加载对应配置
 // ============================================================
 
-var PROVIDERS = {
-  deepseek: { name: 'DeepSeek', model: 'deepseek-chat', keyUrl: 'https://platform.deepseek.com/api_keys' },
-  qwen: { name: '通义千问', model: 'qwen-turbo', keyUrl: 'https://bailian.console.aliyun.com/#/api-key' },
-  glm: { name: '智谱GLM', model: 'glm-4-flash', keyUrl: 'https://open.bigmodel.cn/manage/apikey' },
-  kimi: { name: 'Kimi', model: 'moonshot-v1-8k', keyUrl: 'https://platform.moonshot.cn/console/api-keys' },
-  openrouter: { name: 'OpenRouter', model: 'meta-llama/llama-3-8b-instruct', keyUrl: 'https://openrouter.ai/keys' },
-  mimo: { name: 'MiMo', model: 'mimo-v2.5-pro', keyUrl: 'https://mimo.mi.com' }
-};
-
-// ★ 系统默认提示词：必须与 background.js 中的 SYSTEM_PROMPT 保持完全一致 ★
-// 设置框默认预填此内容，用户可在此基础上增 / 删 / 改；也可清空后自写。
-// 后台据此区分「从未设置（用此默认）」与「已设置（含空串，严格按用户所写）」。
-var DEFAULT_SYSTEM_PROMPT = '你是一个精准的局部解答助手。请仔细阅读用户提供的【全局背景资料】、【用户划选位置】与【用户划选文字】，在该语境下针对用户的疑问进行解答。当用户划选的文字在资料中出现多处时，请以【用户划选位置】中用 ⟦ ⟧ 标出的确切实例为准，并结合其前后上下文进行精确分析。支持多轮对话，请参考历史对话保持上下文连贯。';
+var PROVIDERS = globalThis.USA_CONFIG.PROVIDERS;
+var DEFAULT_SYSTEM_PROMPT = globalThis.USA_CONFIG.DEFAULT_SYSTEM_PROMPT;
 
 var providerEl = document.getElementById('provider');
 var apiKeyEl = document.getElementById('apiKey');
@@ -48,22 +37,9 @@ function onProviderChange() {
 }
 
 // 页面加载时读取已保存的配置
-chrome.storage.local.get(['apiKeys', 'apiKey', 'models', 'model', 'provider', 'systemPrompt'], function (data) {
+chrome.storage.local.get(['apiKeys', 'models', 'provider', 'systemPrompt'], function (data) {
   allKeys = data.apiKeys || {};
-  if (!data.apiKeys && data.apiKey) {
-    var oldProvider = data.provider || 'deepseek';
-    allKeys[oldProvider] = data.apiKey;
-    chrome.storage.local.set({ apiKeys: allKeys });
-    chrome.storage.local.remove('apiKey');
-  }
-
   allModels = data.models || {};
-  if (!data.models && data.model) {
-    var oldP = data.provider || 'deepseek';
-    allModels[oldP] = data.model;
-    chrome.storage.local.set({ models: allModels });
-    chrome.storage.local.remove('model');
-  }
 
   if (data.provider && PROVIDERS[data.provider]) {
     providerEl.value = data.provider;
@@ -149,4 +125,93 @@ function showStatus(msg, type) {
       statusEl.className = 'status';
     }, 3000);
   }
+}
+
+
+// Tab 切换逻辑
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById(btn.getAttribute('data-target')).classList.add('active');
+    
+    if (btn.getAttribute('data-target') === 'tab-history') {
+      loadHistory();
+    }
+  });
+});
+
+function loadHistory() {
+  const container = document.getElementById('historyListContainer');
+  chrome.storage.local.get(['chatHistoryList'], (data) => {
+    const list = data.chatHistoryList || [];
+    if (list.length === 0) {
+      container.innerHTML = '<div style="text-align:center; padding: 32px 0;">暂无对话记录。</div>';
+      return;
+    }
+    
+    container.innerHTML = '';
+    list.forEach(item => {
+      const el = document.createElement('div');
+      el.className = 'history-item';
+      
+      const d = new Date(item.date);
+      const dateStr = d.toLocaleDateString() + ' ' + d.toLocaleTimeString();
+      
+      let msgsHtml = '';
+      if (item.messages && item.messages.length > 0) {
+        item.messages.forEach(m => {
+          msgsHtml += `
+            <div class="hm-row">
+              <div class="hm-role ${m.role === 'user' ? 'user' : 'assistant'}">${m.role === 'user' ? '🧑 用户' : '🤖 AI'}</div>
+              <div class="hm-content">${escapeHtml(m.content)}</div>
+            </div>
+          `;
+        });
+      }
+      
+      el.innerHTML = `
+        <div class="hi-header">
+          <div>
+            <div class="hi-title">${escapeHtml(item.title || '未知网页')}</div>
+            <a href="${item.url}" class="hi-url" target="_blank">${escapeHtml(item.url)}</a>
+          </div>
+          <div class="hi-date">${dateStr}</div>
+        </div>
+        <div class="hi-summary">💬 ${escapeHtml(item.summary || '...')} <span style="font-size:11px;color:#9aa0a6;">(点击展开详情)</span></div>
+        <div class="hi-messages">${msgsHtml}</div>
+      `;
+      
+      const summaryBox = el.querySelector('.hi-summary');
+      const msgsBox = el.querySelector('.hi-messages');
+      summaryBox.addEventListener('click', () => {
+        msgsBox.classList.toggle('open');
+      });
+      
+      container.appendChild(el);
+    });
+  });
+}
+
+function escapeHtml(str) {
+  if (!str) return '';
+  return String(str).replace(/[&<>'"]/g, match => {
+    const escape = { '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' };
+    return escape[match];
+  });
+}
+
+document.getElementById('clearHistoryBtn').addEventListener('click', () => {
+  if (confirm('确定要清空所有对话记录吗？此操作不可恢复。')) {
+    chrome.storage.local.set({ chatHistoryList: [] }, () => {
+      loadHistory();
+    });
+  }
+});
+
+// 在 options 页加载时尝试检测是否有 hash 跳转
+if (location.hash === '#history') {
+  const btn = document.querySelector('.tab-btn[data-target="tab-history"]');
+  if (btn) btn.click();
 }

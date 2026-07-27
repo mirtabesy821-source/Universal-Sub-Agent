@@ -2,6 +2,33 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.2.12] - 2026-07-12
+
+### Fixed / 修复
+- **嵌套小窗块级公式格式错乱（display 模式误判）** — 窗口一 → 窗口二（及多层嵌套）时，顶部「划选内容」区的块级公式（`$$...$$` / `\[...\]`）以行内小号样式重绘，分式变小、求和上下限移到角标，格式明显错乱。
+  - 根因：`extractTexFromMathContainer()` 的 KaTeX 分支用 `tex.indexOf('\n')` 判断 `display` 模式，但**单行块级公式**（如 `$$\frac{a}{b}$$`）的 TeX 源码不含换行 → `display` 被误判为 `false` → 块级公式被包装成 `$...$`（行内）重绘。
+  - 修复：改为从 `.katex` 容器向上查找 `.katex-display` 祖先类来判断 display 模式（auto-render 渲染 `$$...$$` / `\[...\]` 时会生成该外层类），与实际渲染结构一致。
+- **长公式部分选中被误判为全选** — 长公式中选中某一部分（特别是占宽度 ≥95% 的大段）时，扩展会自动把**整段公式源码**发给 AI，用户无法针对公式的某一部分直接提问。
+  - 根因：`isFullMathSelection()` 优先用「选区/容器包围盒面积比例 ≥0.95」判断是否全选。单行公式高度恒匹配，选中 96% 宽度即被误判为全选 → `extractMathSource()` 提取整段 TeX 源码。
+  - 修复：改为**文本判断优先**——只有当 `sel.toString()` 等于公式完整可视文本（`getMathVisualText()`）时才认定为全选；面积比例仅在文本不可用时（如可视文本提取失败）作兜底。KaTeX 的 `.katex-mathml` 用 `clip + absolute` 隐藏，鼠标拖选不会覆盖，故 `sel.toString()` 与可视文本一致，判断可靠。
+- **新增回归测试** `test_formula_partial_and_nested.js` 增加 Part 5 / Part 6：① 用真实 KaTeX 渲染单行块级公式，验证 `display=true` 且窗口一/窗口二展示区均含 `.katex-display`（块级模式）；② mock 真实浏览器的非零包围盒，构造「选中 96% 宽度但文本不匹配」场景，验证不被误判为全选、`extractMathSource` 返回 `null`、`getSelectionText` 返回选中部分文本。已做反向验证（回退修复后 Part 5 失败 3 项、Part 6 失败 3 项），确认测试有效。全套 7 个测试套件共 110+ 项断言全绿，无回归。
+
+## [1.2.11] - 2026-07-12
+
+### Fixed / 修复
+- **长公式部分选中不再自动扩展为整段公式** — 此前只要选区落在某个公式容器内，`extractMathSource()` 与 `findSelectedMathElement()` 就会返回整段公式源码，导致用户无法针对公式中的某一部分直接提问。现新增 `getMathVisualText()` / `isFullMathSelection()`：仅当用户确实选中了**整个**公式时才提取/克隆完整源码；若是部分选中，则回退为普通文本处理，按用户实际划选的可见内容提问。
+- **嵌套小窗顶部公式显示格式错乱** — 窗口一 → 窗口二（以及多层嵌套）时，顶部 `usa-selected` 的 `-webkit-box` / `line-clamp` / `word-break` 等文本排版样式会干扰公式布局，且原样克隆多层渲染节点容易带入页面/上层样式偏差。现改为：有干净源码时优先用 KaTeX 在目标窗口重新渲染；无源码时才克隆。同时为含公式的 `usa-selected` 添加 `usa-has-math` 类，解除行截断并禁止自动换行，保证块级公式可横向滚动、行内公式不被错误断开。
+- **新增回归测试** `test_formula_partial_and_nested.js`：覆盖「长公式部分选中不扩展」与「窗口一→窗口二嵌套公式仍能正确渲染」两个场景，17 项断言全绿。
+
+## [1.2.10] - 2026-07-12
+
+### Fixed / 修复
+- **KaTeX 渲染 Unicode 勾选/叉号（✓、❌）时刷屏控制台警告** — 当 AI 回答或选区里出现含这些 Unicode 符号的公式时，KaTeX 会报两类警告：
+  - `LaTeX-incompatible input ... Unrecognized Unicode character ... [unknownSymbol]`（strict 警告）
+  - `No character metrics for '✓' in style 'Main-Regular' and mode 'text'`（metrics 警告，无法通过 strict 关闭，见 KaTeX issue #3720）
+  - 将 `KA_OPTIONS.strict` 中的 `unknownSymbol` 设为 `ignore`，与既有的 `unicodeTextInMathMode` 保持一致；同时新增 `renderMathInElementSafe()` 在每次调用渲染时临时过滤 `No character metrics ...` 日志，避免控制台被刷屏。
+  - 验证：新增 `test_unicode_symbols.js`，在 jsdom + 真实 KaTeX 下渲染 `\(✓\)` / `\(❌\)`，确认公式元素正常生成且控制台无 warn/error。原有 5 套测试（嵌套上下文/提示词/精确定位/公式选词/端到端渲染）共 79 项断言全绿，无回归。
+
 ## [1.2.9] - 2026-07-10
 
 ### Fixed / 修复

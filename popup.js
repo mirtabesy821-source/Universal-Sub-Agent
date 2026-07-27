@@ -3,14 +3,7 @@
 // 显示配置状态 + 快速切换厂商
 // ============================================================
 
-var PROVIDER_NAMES = {
-  deepseek: 'DeepSeek',
-  qwen: '通义千问',
-  glm: '智谱GLM',
-  kimi: 'Kimi',
-  openrouter: 'OpenRouter',
-  mimo: '小米 MiMo'
-};
+var PROVIDERS = globalThis.USA_CONFIG.PROVIDERS;
 
 var statusBox = document.getElementById('statusBox');
 var statusText = document.getElementById('statusText');
@@ -18,25 +11,12 @@ var info = document.getElementById('info');
 var openSettingsBtn = document.getElementById('openSettings');
 var providerSelect = document.getElementById('quickProvider');
 
-chrome.storage.local.get(['apiKeys', 'apiKey', 'models', 'model', 'provider'], function (data) {
+chrome.storage.local.get(['apiKeys', 'models', 'provider'], function (data) {
   var apiKeys = data.apiKeys || {};
-  if (!data.apiKeys && data.apiKey) {
-    var oldProvider = data.provider || 'deepseek';
-    apiKeys[oldProvider] = data.apiKey;
-    chrome.storage.local.set({ apiKeys: apiKeys });
-    chrome.storage.local.remove('apiKey');
-  }
-
   var models = data.models || {};
-  if (!data.models && data.model) {
-    var oldP = data.provider || 'deepseek';
-    models[oldP] = data.model;
-    chrome.storage.local.set({ models: models });
-    chrome.storage.local.remove('model');
-  }
 
-  var provider = data.provider || 'deepseek';
-  var providerName = PROVIDER_NAMES[provider] || provider;
+  var provider = data.provider || globalThis.USA_CONFIG.DEFAULT_PROVIDER;
+  var providerName = PROVIDERS[provider] ? PROVIDERS[provider].name : provider;
   var hasKey = !!(apiKeys[provider]);
 
   if (hasKey) {
@@ -54,12 +34,12 @@ chrome.storage.local.get(['apiKeys', 'apiKey', 'models', 'model', 'provider'], f
   // 填充快速切换下拉框（只显示已配置 Key 的厂商）
   providerSelect.innerHTML = '';
   var hasAny = false;
-  Object.keys(PROVIDER_NAMES).forEach(function (p) {
+  Object.keys(PROVIDERS).forEach(function (p) {
     if (apiKeys[p]) {
       hasAny = true;
       var opt = document.createElement('option');
       opt.value = p;
-      opt.textContent = PROVIDER_NAMES[p];
+      opt.textContent = PROVIDERS[p].name;
       if (p === provider) opt.selected = true;
       providerSelect.appendChild(opt);
     }
@@ -81,6 +61,20 @@ providerSelect.addEventListener('change', function () {
   chrome.storage.local.set({ provider: newProvider }, function () {
     // 刷新 popup 显示
     location.reload();
+  });
+});
+
+document.getElementById('summarizePage').addEventListener('click', () => {
+  chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+    if (tabs[0]) {
+      chrome.tabs.sendMessage(tabs[0].id, { type: 'SUMMARIZE_PAGE' }, () => {
+        if (chrome.runtime.lastError) {
+          document.getElementById('info').innerHTML = '无法在这个页面提取内容（可能是系统页面或未加载完成）。';
+        } else {
+          window.close();
+        }
+      });
+    }
   });
 });
 

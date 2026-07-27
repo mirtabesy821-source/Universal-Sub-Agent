@@ -9,82 +9,16 @@
 // ============================================================
 // ★ 多厂商 Key 存储：apiKeys[provider] 按厂商独立存放，切换厂商无需重新填 Key ★
 // 旧版兼容：首次读取时自动将 apiKey → apiKeys[provider] 迁移
-// 可选厂商：'deepseek' | 'qwen' | 'glm' | 'kimi' | 'openrouter' | 'mimo'
-const DEFAULT_PROVIDER = 'deepseek';
+importScripts('shared/config.js');
 
-// 各厂商预设（都走 OpenAI 兼容协议 + SSE 流式，核心代码无需改动）
-// keyUrl: 该厂商 API Key 申请地址（设置页"获取 Key"按钮跳转用）
-const PROVIDERS = {
-  deepseek: {
-    name: 'DeepSeek',
-    url: 'https://api.deepseek.com/chat/completions',
-    model: 'deepseek-chat',
-    extraHeaders: {},
-    keyUrl: 'https://platform.deepseek.com/api_keys'
-  },
-  qwen: {
-    name: '通义千问',
-    url: 'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions',
-    model: 'qwen-turbo',
-    extraHeaders: {},
-    keyUrl: 'https://bailian.console.aliyun.com/#/api-key'
-  },
-  glm: {
-    name: '智谱GLM',
-    url: 'https://open.bigmodel.cn/api/paas/v4/chat/completions',
-    model: 'glm-4-flash',
-    extraHeaders: {},
-    keyUrl: 'https://open.bigmodel.cn/manage/apikey'
-  },
-  kimi: {
-    name: 'Kimi',
-    url: 'https://api.moonshot.cn/v1/chat/completions',
-    model: 'moonshot-v1-8k',
-    extraHeaders: {},
-    keyUrl: 'https://platform.moonshot.cn/console/api-keys'
-  },
-  openrouter: {
-    name: 'OpenRouter',
-    url: 'https://openrouter.ai/api/v1/chat/completions',
-    model: 'meta-llama/llama-3-8b-instruct',
-    extraHeaders: { 'HTTP-Referer': 'https://github.com/mirtabesy821-source/Universal-Sub-Agent', 'X-Title': 'Universal Sub-Agent' },
-    keyUrl: 'https://openrouter.ai/keys'
-  },
-  mimo: {
-    name: 'MiMo',
-    url: 'https://api.xiaomimimo.com/v1/chat/completions',
-    model: 'mimo-v2.5-pro',
-    extraHeaders: {},
-    keyUrl: 'https://mimo.mi.com'
-  }
-};
+const PROVIDERS = globalThis.USA_CONFIG.PROVIDERS;
+const DEFAULT_PROVIDER = globalThis.USA_CONFIG.DEFAULT_PROVIDER;
 
 // 从 chrome.storage.local 读取用户配置（API Key / 厂商 / 模型）
 // Storage schema: { apiKeys: { provider: 'key', ... }, models: { provider: 'model', ... }, provider: string }
 // 兼容旧版 { apiKey: string, model: string }：首次读取自动迁移到 apiKeys / models
-// requestedProvider 可选参数：允许消息指定厂商（每个对话框独立选厂商）
 async function getConfig(requestedProvider) {
-  const data = await chrome.storage.local.get(['apiKeys', 'apiKey', 'models', 'model', 'provider', 'systemPrompt']);
-
-  // 旧版迁移：apiKey / model 存在 → 一次性写入 apiKeys / models 并清理旧字段
-  let needMigration = false;
-  if (!data.apiKeys && data.apiKey) {
-    data.apiKeys = {};
-    data.apiKeys[data.provider || DEFAULT_PROVIDER] = data.apiKey;
-    needMigration = true;
-  }
-  if (!data.models && data.model) {
-    if (!data.models) data.models = {};
-    data.models[data.provider || DEFAULT_PROVIDER] = data.model;
-    needMigration = true;
-  }
-  if (needMigration) {
-    const toSave = {};
-    if (data.apiKeys) toSave.apiKeys = data.apiKeys;
-    if (data.models) toSave.models = data.models;
-    await chrome.storage.local.set(toSave);
-    await chrome.storage.local.remove(['apiKey', 'model']);
-  }
+  const data = await chrome.storage.local.get(['apiKeys', 'models', 'provider', 'systemPrompt']);
 
   const provider = requestedProvider || data.provider || DEFAULT_PROVIDER;
   const cfg = PROVIDERS[provider] || PROVIDERS[DEFAULT_PROVIDER];
@@ -108,12 +42,37 @@ async function getConfig(requestedProvider) {
   };
 }
 
-const SYSTEM_PROMPT = '你是一个精准的局部解答助手。请仔细阅读用户提供的【全局背景资料】、【用户划选位置】与【用户划选文字】，在该语境下针对用户的疑问进行解答。当用户划选的文字在资料中出现多处时，请以【用户划选位置】中用 ⟦ ⟧ 标出的确切实例为准，并结合其前后上下文进行精确分析。支持多轮对话，请参考历史对话保持上下文连贯。';
+const SYSTEM_PROMPT = globalThis.USA_CONFIG.DEFAULT_SYSTEM_PROMPT;
 
 // 插件首次安装 / 更新 / 浏览器更新时触发
-chrome.runtime.onInstalled.addListener((details) => {
+chrome.runtime.onInstalled.addListener(async (details) => {
   console.log('[Universal Sub-Agent] onInstalled:', details.reason);
+  
+  // 执行旧版配置迁移
+  const data = await chrome.storage.local.get(['apiKeys', 'apiKey', 'models', 'model', 'provider']);
+  let needMigration = false;
+  if (!data.apiKeys && data.apiKey) {
+    data.apiKeys = {};
+    data.apiKeys[data.provider || DEFAULT_PROVIDER] = data.apiKey;
+    needMigration = true;
+  }
+  if (!data.models && data.model) {
+    if (!data.models) data.models = {};
+    data.models[data.provider || DEFAULT_PROVIDER] = data.model;
+    needMigration = true;
+  }
+  if (needMigration) {
+    const toSave = {};
+    if (data.apiKeys) toSave.apiKeys = data.apiKeys;
+    if (data.models) toSave.models = data.models;
+    await chrome.storage.local.set(toSave);
+    await chrome.storage.local.remove(['apiKey', 'model']);
+    console.log('[Universal Sub-Agent] 已完成旧版配置迁移。');
+  }
 });
+
+// 飞行请求追踪：requestId → AbortController，用于响应用户关闭/新对话时取消流
+const activeRequests = new Map();
 
 // 监听来自 content.js 的消息
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
@@ -124,6 +83,13 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     sendResponse({ status: 'started' });
     streamAskAI(message, sender);
     return false; // 同步回执，不使用异步 sendResponse 通道
+  }
+
+  if (message && message.type === 'CANCEL_REQUEST') {
+    const ctrl = activeRequests.get(message.requestId);
+    if (ctrl) { ctrl.abort(); activeRequests.delete(message.requestId); }
+    sendResponse({ status: 'cancelled' });
+    return false;
   }
 
   // 其它消息：同步回执
@@ -141,7 +107,11 @@ async function streamAskAI(message, sender) {
   // 统一的消息回推：带 frameId 精准定向 + try/catch 防止标签页关闭后 SW 抛异常
   const sendToFrame = (payload) => {
     if (typeof tabId !== 'number') return;
-    try { chrome.tabs.sendMessage(tabId, payload, { frameId }); } catch (_) { /* ignore */ }
+    try { 
+      chrome.tabs.sendMessage(tabId, payload, { frameId }, () => {
+        void chrome.runtime.lastError;
+      }); 
+    } catch (_) { /* ignore */ }
   };
 
   // 统一的错误推送（无论哪一步失败，都确保前端能收到 AI_ERROR 而非一直"思考中"）
@@ -209,6 +179,7 @@ async function streamAskAI(message, sender) {
 
   // 带超时控制：90 秒兜底，防止网络挂起导致前端永远停在"思考中…"
   const controller = new AbortController();
+  activeRequests.set(requestId, controller);
   let timedOut = false;
   const timeoutId = setTimeout(() => { timedOut = true; controller.abort(); }, 90000);
 
@@ -231,6 +202,7 @@ async function streamAskAI(message, sender) {
       });
     } catch (e) {
       clearTimeout(timeoutId);
+      activeRequests.delete(requestId);
       if (timedOut || e.name === 'AbortError') fail('请求超时（90 秒无响应），请检查网络或更换模型。');
       else fail('网络请求失败：' + (e && e.message ? e.message : String(e)));
       return;
@@ -238,6 +210,7 @@ async function streamAskAI(message, sender) {
 
     if (!res.ok) {
       clearTimeout(timeoutId);
+      activeRequests.delete(requestId);
       let errBody = '';
       try { errBody = await res.text(); } catch (_) { /* ignore */ }
       let hint = '';
@@ -269,6 +242,7 @@ async function streamAskAI(message, sender) {
         const data = line.slice(5).trim(); // 去掉 "data:" 前缀
         if (data === '[DONE]') {
           clearTimeout(timeoutId);
+          activeRequests.delete(requestId);
           console.log('[Universal Sub-Agent] 流式完成, 共', chunkCount, '个 chunk');
           sendToFrame({ type: 'AI_DONE', requestId });
           return;
@@ -287,6 +261,7 @@ async function streamAskAI(message, sender) {
     }
     // 流自然结束（未收到 [DONE]），处理缓冲区残留的最后一帧数据
     clearTimeout(timeoutId);
+    activeRequests.delete(requestId);
     if (buffer.trim()) {
       const lastLine = buffer.trim();
       if (lastLine.startsWith('data:')) {
@@ -304,7 +279,8 @@ async function streamAskAI(message, sender) {
     sendToFrame({ type: 'AI_DONE', requestId });
   } catch (e) {
     clearTimeout(timeoutId);
-    if (timedOut || e.name === 'AbortError') fail('响应中途中断超时。');
+    activeRequests.delete(requestId);
+    if (timedOut || e.name === 'AbortError') console.log('[Universal Sub-Agent] 请求被中断:', requestId);
     else fail('流式解析异常：' + (e && e.message ? e.message : String(e)));
   }
 }

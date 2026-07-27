@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Universal Sub-Agent",
-  "version": "1.2.9",
+  "version": "1.2.12",
   "description": "在任何网页上划选文字，即可弹出局部 AI 解答窗口，解答内容不污染原对话上下文。Select text on any webpage to get AI explanations in a floating dialog.",
   "homepage_url": "https://github.com/mirtabesy821-source/Universal-Sub-Agent",
   "icons": {
@@ -31,7 +31,14 @@
   "content_scripts": [
     {
       "matches": ["<all_urls>"],
-      "js": ["katex/katex.min.js", "katex/contrib/auto-render.min.js", "content.js"],
+      "js": [
+        "katex/katex.min.js",
+        "katex/contrib/auto-render.min.js",
+        "vendor/marked.min.js",
+        "vendor/purify.min.js",
+        "shared/config.js",
+        "content.js"
+      ],
       "run_at": "document_idle"
     }
   ],
