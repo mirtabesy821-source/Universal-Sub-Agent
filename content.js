@@ -465,8 +465,6 @@ var __usaInjected;
     return /^[\d][\d.,\s%$]*$/.test(s);
   }
 
-// renderInline removed, using marked.js instead
-
   // 仅渲染公式（不解释 * _ ` 等 Markdown），用于「选中文字」展示区，
   // 避免把用户选中的普通文本里的 * _ 当成格式符号。公式用 KaTeX 重绘。
   function renderMathOnly(text) {

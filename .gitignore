@@ -28,3 +28,7 @@ build/
 .env
 .env.local
 *.key
+
+# AI Workspaces
+.reasonix/
+.workbuddy/
