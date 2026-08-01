@@ -85,7 +85,7 @@ Select text on any webpage to get AI-powered explanations in a floating dialog.
 
 | 厂商 / Provider | 默认模型 / Default Model | 获取 API Key / Get API Key |
 |---|---|---|
-| DeepSeek | `deepseek-chat` | [platform.deepseek.com](https://platform.deepseek.com/api_keys) |
+| DeepSeek | `deepseek-v4-flash` | [platform.deepseek.com](https://platform.deepseek.com/api_keys) |
 | 通义千问 (Qwen) | `qwen-turbo` | [bailian.console.aliyun.com](https://bailian.console.aliyun.com/#/api-key) |
 | 智谱 GLM | `glm-4-flash` (免费) | [open.bigmodel.cn](https://open.bigmodel.cn/manage/apikey) |
 | Kimi (Moonshot) | `moonshot-v1-8k` | [platform.moonshot.cn](https://platform.moonshot.cn/console/api-keys) |

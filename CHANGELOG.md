@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.3.3] - 2026-08-01
+
+### Changed / 变更
+- **DeepSeek 默认模型更新** — `deepseek-chat` 已弃用，默认模型改为 `deepseek-v4-flash`（设置页留空时自动使用，已配置过自定义模型的用户不受影响）。
+
 ## [1.3.2] - 2026-08-01
 
 ### Added / 新增

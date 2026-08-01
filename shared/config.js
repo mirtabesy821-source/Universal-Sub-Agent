@@ -1,6 +1,6 @@
 globalThis.USA_CONFIG = {
   PROVIDERS: {
-    deepseek: { name: 'DeepSeek', url: 'https://api.deepseek.com/chat/completions', model: 'deepseek-chat', extraHeaders: {}, keyUrl: 'https://platform.deepseek.com/api_keys' },
+    deepseek: { name: 'DeepSeek', url: 'https://api.deepseek.com/chat/completions', model: 'deepseek-v4-flash', extraHeaders: {}, keyUrl: 'https://platform.deepseek.com/api_keys' },
     qwen: { name: '通义千问', url: 'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions', model: 'qwen-turbo', extraHeaders: {}, keyUrl: 'https://bailian.console.aliyun.com/#/api-key' },
     glm: { name: '智谱GLM', url: 'https://open.bigmodel.cn/api/paas/v4/chat/completions', model: 'glm-4-flash', extraHeaders: {}, keyUrl: 'https://open.bigmodel.cn/manage/apikey' },
     kimi: { name: 'Kimi', url: 'https://api.moonshot.cn/v1/chat/completions', model: 'moonshot-v1-8k', extraHeaders: {}, keyUrl: 'https://platform.moonshot.cn/console/api-keys' },
