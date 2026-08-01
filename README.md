@@ -41,7 +41,17 @@ Select text on any webpage to get AI-powered explanations in a floating dialog.
 
 ## 🚀 安装 / Installation
 
-### 方式一：开发者模式加载（推荐）/ From Source (Recommended)
+### 方式一：从 GitHub Releases 下载（推荐）/ Download from Releases (Recommended)
+
+前往 [Releases](https://github.com/mirtabesy821-source/Universal-Sub-Agent/releases) 页面，下载最新版本
+`universal-sub-agent-vX.X.X.zip` 并解压，然后：
+
+1. 打开 Chrome，地址栏输入 `chrome://extensions`
+2. 打开右上角"开发者模式" / Enable "Developer mode"
+3. 点击"加载已解压的扩展程序" / Click "Load unpacked"
+4. 选择解压后的文件夹（包含 `manifest.json` 的文件夹）
+
+### 方式二：开发者模式加载（From Source）
 
 1. 下载本项目代码：
 
@@ -54,7 +64,7 @@ Select text on any webpage to get AI-powered explanations in a floating dialog.
 4. 点击"加载已解压的扩展程序" / Click "Load unpacked"
 5. 选择项目根目录（包含 `manifest.json` 的文件夹）
 
-### 方式二：Chrome 应用商店 / From Chrome Web Store
+### 方式三：Chrome 应用商店 / From Chrome Web Store
 
 > 即将上线 / Coming soon.
 
@@ -124,6 +134,7 @@ universal-sub-agent/
 ├── options.js          # 设置页逻辑
 ├── privacy.html        # 隐私政策页
 ├── shared/config.js    # 厂商与默认提示词配置（后台/弹窗/设置页共用）
+├── scripts/build.js    # 打包脚本（npm run build → dist/*.zip）
 ├── icons/              # 扩展图标 (16/48/128px)
 ├── vendor/             # marked / DOMPurify (vendored)
 └── katex/              # KaTeX 数学渲染库 (vendored)
@@ -145,6 +156,14 @@ npm test
 ```
 
 第三方组件许可证见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
+
+### 打包 / Building the Release Zip
+
+```bash
+npm run build
+```
+
+会在 `dist/` 下生成 `universal-sub-agent-v<version>.zip`（仅包含运行时必需文件与文档，可用于 Chrome Web Store 提交或发布到 GitHub Releases）。推送 `v*` tag 时，GitHub Actions 会自动运行测试、打包并创建 Release。
 
 ### 本地开发 / Local Development
 

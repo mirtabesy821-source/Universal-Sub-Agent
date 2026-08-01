@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.3.2] - 2026-08-01
+
+### Added / 新增
+- **打包脚本** [scripts/build.js](scripts/build.js)（`npm run build`）— 一键生成 Chrome Web Store / GitHub Releases 使用的 `dist/universal-sub-agent-v<version>.zip`，只包含运行时必需文件与文档。
+- **GitHub Release 自动发布** — 推送 `v*` tag 时自动运行测试 + 打包并创建 Release（附带 zip 与自动生成的 release notes）。
+- README 新增 Releases 下载说明。
+
+### Changed / 变更
+- 版本号升至 1.3.2。
+
 ## [1.3.1] - 2026-08-01
 
 ### Removed / 移除
