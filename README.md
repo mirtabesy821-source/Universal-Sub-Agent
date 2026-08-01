@@ -17,7 +17,6 @@ Select text on any webpage to get AI-powered explanations in a floating dialog.
 ## ✨ 功能特性 / Features
 
 - **划词即问** — 在任意网页选中文本，选区旁自动弹出"🔍 解释"按钮
-- **沉浸式总结** — 在 Popup 弹窗中点击“总结当前网页”，一键提取长文核心内容
 - **悬浮对话窗** — Notion AI 风格的毛玻璃浮窗，Shadow DOM 完全隔离，不影响页面
 - **多窗口支持** — 同时最多打开 3 个独立对话框，各自维护独立上下文（含序号标识）
 - **多轮对话** — 针对选中文本连续提问，AI 保持上下文连贯
@@ -28,7 +27,7 @@ Select text on any webpage to get AI-powered explanations in a floating dialog.
 - **Markdown 排版** — 标题、列表、代码块、引用、链接等完整支持
 - **LaTeX 数学公式** — 集成 KaTeX，支持 `$...$`、`$$...$$`、`\(...\)`、`\[...\]` 语法
 - **页面上下文感知** — 自动抓取选区周围的文字作为背景资料发给 AI
-- **多厂商支持** — DeepSeek、通义千问、智谱GLM、Kimi、OpenRouter，一键切换
+- **多厂商支持** — DeepSeek、通义千问、智谱GLM、Kimi、OpenRouter、MiMo，一键切换
 - **暗黑模式自适应** — 对话气泡与工具栏完美兼容浅色与深色系统主题
 - **安全可靠** — API Key 存储在本地 chrome.storage，CSP 加固，XSS 防护
 
@@ -81,6 +80,7 @@ Select text on any webpage to get AI-powered explanations in a floating dialog.
 | 智谱 GLM | `glm-4-flash` (免费) | [open.bigmodel.cn](https://open.bigmodel.cn/manage/apikey) |
 | Kimi (Moonshot) | `moonshot-v1-8k` | [platform.moonshot.cn](https://platform.moonshot.cn/console/api-keys) |
 | OpenRouter | `meta-llama/llama-3-8b-instruct` | [openrouter.ai/keys](https://openrouter.ai/keys) |
+| MiMo | `mimo-v2.5-pro` | [mimo.mi.com](https://mimo.mi.com) |
 
 所有厂商均兼容 OpenAI 协议，切换厂商只需在设置页更改选择并更换对应的 Key。
 
@@ -96,8 +96,7 @@ Select text on any webpage to get AI-powered explanations in a floating dialog.
 6. 鼠标悬停在 AI 回复上，即可使用底部出现的工具栏**一键复制文本/Markdown**
 7. 可以继续输入问题进行多轮对话
 8. 在回答文字上再次划选可弹出新窗口进行多级追问（最多 3 个窗口）
-9. 点击浏览器右上角插件图标，点击**“📝 总结当前网页”**，即可一键导读长文章
-10. 右键点击插件图标进入“选项”，可以在**“历史记录”**选项卡中回顾所有对话
+9. 右键点击插件图标进入“选项”，可以在**“历史记录”**选项卡中回顾所有对话
 
 ---
 
@@ -123,7 +122,10 @@ universal-sub-agent/
 ├── popup.js            # 弹窗逻辑
 ├── options.html        # 设置页
 ├── options.js          # 设置页逻辑
+├── privacy.html        # 隐私政策页
+├── shared/config.js    # 厂商与默认提示词配置（后台/弹窗/设置页共用）
 ├── icons/              # 扩展图标 (16/48/128px)
+├── vendor/             # marked / DOMPurify (vendored)
 └── katex/              # KaTeX 数学渲染库 (vendored)
     ├── katex.min.js
     ├── katex.min.css
@@ -132,6 +134,17 @@ universal-sub-agent/
     └── fonts/
         └── *.woff2
 ```
+
+### 运行测试 / Running Tests
+
+测试使用 [jsdom](https://github.com/jsdom/jsdom) 真实加载 `content.js` / `background.js` / `options.js`，覆盖公式选词、嵌套上下文、选词精确定位、系统提示词等场景：
+
+```bash
+npm install
+npm test
+```
+
+第三方组件许可证见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
 
 ### 本地开发 / Local Development
 

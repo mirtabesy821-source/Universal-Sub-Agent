@@ -19,8 +19,6 @@ We will respond within 48 hours and credit responsible reporters in the fix.
 
 | Permission | Why it's needed |
 |---|---|
-| `activeTab` | Access the current tab to inject the selection UI |
-| `scripting` | Inject content scripts for text selection and dialog |
 | `storage` | Store your API Key and preferences locally |
 | `<all_urls>` | Work on any webpage you browse |
 

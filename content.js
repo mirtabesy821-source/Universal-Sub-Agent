@@ -1085,6 +1085,70 @@ var __usaInjected;
 
   // ===== DialogInstance 工厂函数 =====
   // 每个实例拥有独立的 DOM引用、对话历史、请求状态、渲染状态、拖拽状态等
+
+  // 插入复制工具栏（纯文本 / Markdown 一键复制）
+  function attachCopyToolbar(node, rawContent) {
+    if (!node || !rawContent) return;
+    const toolbar = document.createElement('div');
+    toolbar.className = 'usa-ai-toolbar';
+    toolbar.innerHTML = `
+      <button class="usa-copy-btn usa-copy-text" title="复制纯文本">📋 复制</button>
+      <button class="usa-copy-btn usa-copy-md" title="复制 Markdown">📄 Markdown</button>
+    `;
+    toolbar.querySelector('.usa-copy-text').addEventListener('click', (e) => {
+      e.stopPropagation();
+      let textToCopy = node.innerText;
+      textToCopy = textToCopy.replace('📋 复制\n📄 Markdown', '').trim();
+      navigator.clipboard.writeText(textToCopy).then(() => {
+        const btn = toolbar.querySelector('.usa-copy-text');
+        btn.textContent = '✅ 已复制';
+        setTimeout(() => btn.textContent = '📋 复制', 2000);
+      });
+    });
+    toolbar.querySelector('.usa-copy-md').addEventListener('click', (e) => {
+      e.stopPropagation();
+      navigator.clipboard.writeText(rawContent).then(() => {
+        const btn = toolbar.querySelector('.usa-copy-md');
+        btn.textContent = '✅ 已复制';
+        setTimeout(() => btn.textContent = '📄 Markdown', 2000);
+      });
+    });
+    node.appendChild(toolbar);
+  }
+
+  // 保存对话到本地历史记录（上限 100 条；写入失败仅告警，绝不影响对话本身）
+  function saveChatHistory(instId, question, history) {
+    try {
+      chrome.storage.local.get(['chatHistoryList'], (data) => {
+        try {
+          const list = (data.chatHistoryList || []).slice(0, 100);
+          const q = question || '';
+          const chatItem = {
+            id: instId,
+            date: Date.now(),
+            url: window.location.href,
+            title: document.title,
+            summary: q.slice(0, 30) + (q.length > 30 ? '...' : ''),
+            messages: history
+          };
+          const idx = list.findIndex(item => item.id === instId);
+          if (idx >= 0) list[idx] = chatItem;
+          else list.unshift(chatItem);
+          if (list.length > 100) list.length = 100;
+          chrome.storage.local.set({ chatHistoryList: list }, () => {
+            if (chrome.runtime.lastError) {
+              console.warn('[Universal Sub-Agent] 历史记录写入失败:', chrome.runtime.lastError.message);
+            }
+          });
+        } catch (e) {
+          console.warn('[Universal Sub-Agent] 历史记录保存异常:', e);
+        }
+      });
+    } catch (e) {
+      console.warn('[Universal Sub-Agent] 历史记录读取异常:', e);
+    }
+  }
+
   function createDialogInstance(selectedText, pageContext) {
     const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
 
@@ -1295,59 +1359,14 @@ var __usaInjected;
       if (!answerRaw) { currentAIBubble.textContent = '（回答为空）'; }
       else { currentAIBubble.innerHTML = renderMarkdown(answerRaw); renderMath(); }
       chatHistory.push({ role: 'user', content: pendingUserQuestion });
-            chatHistory.push({ role: 'assistant', content: answerRaw });
+      chatHistory.push({ role: 'assistant', content: answerRaw });
       // 保留最近 20 轮对话（40 条消息），防止上下文窗口溢出导致请求失败
       if (chatHistory.length > 40) chatHistory = chatHistory.slice(-40);
       const node = currentAIBubble;
       const rawContent = answerRaw;
 
-      // 插入复制工具栏
-      if (node && rawContent) {
-        const toolbar = document.createElement('div');
-        toolbar.className = 'usa-ai-toolbar';
-        toolbar.innerHTML = `
-          <button class="usa-copy-btn usa-copy-text" title="复制纯文本">📋 复制</button>
-          <button class="usa-copy-btn usa-copy-md" title="复制 Markdown">📄 Markdown</button>
-        `;
-        toolbar.querySelector('.usa-copy-text').addEventListener('click', (e) => {
-          e.stopPropagation();
-          let textToCopy = node.innerText;
-          textToCopy = textToCopy.replace('📋 复制\n📄 Markdown', '').trim();
-          navigator.clipboard.writeText(textToCopy).then(() => {
-            const btn = toolbar.querySelector('.usa-copy-text');
-            btn.textContent = '✅ 已复制';
-            setTimeout(() => btn.textContent = '📋 复制', 2000);
-          });
-        });
-        toolbar.querySelector('.usa-copy-md').addEventListener('click', (e) => {
-          e.stopPropagation();
-          navigator.clipboard.writeText(rawContent).then(() => {
-            const btn = toolbar.querySelector('.usa-copy-md');
-            btn.textContent = '✅ 已复制';
-            setTimeout(() => btn.textContent = '📄 Markdown', 2000);
-          });
-        });
-        node.appendChild(toolbar);
-      }
-
-      // 保存到本地历史记录
-      chrome.storage.local.get(['chatHistoryList'], (data) => {
-        let list = data.chatHistoryList || [];
-        const chatItem = {
-          id: inst.id,
-          date: Date.now(),
-          url: window.location.href,
-          title: document.title,
-          summary: pendingUserQuestion.slice(0, 30) + (pendingUserQuestion.length > 30 ? '...' : ''),
-          messages: chatHistory
-        };
-        const idx = list.findIndex(item => item.id === inst.id);
-        if (idx >= 0) list[idx] = chatItem;
-        else list.unshift(chatItem);
-        
-        if (list.length > 100) list = list.slice(0, 100);
-        chrome.storage.local.set({ chatHistoryList: list });
-      });
+      attachCopyToolbar(node, rawContent);
+      saveChatHistory(inst.id, pendingUserQuestion, chatHistory);
 
 
       currentAIBubble = null;
@@ -1455,58 +1474,12 @@ var __usaInjected;
                currentAIBubble.textContent = '[已由用户中止]';
             }
             chatHistory.push({ role: 'user', content: pendingUserQuestion });
-                        chatHistory.push({ role: 'assistant', content: answerRaw || '[已由用户中止]' });
+            chatHistory.push({ role: 'assistant', content: answerRaw || '[已由用户中止]' });
             const node = currentAIBubble;
             const rawContent = answerRaw || '[已由用户中止]';
 
-      // 插入复制工具栏
-      if (node && rawContent) {
-        const toolbar = document.createElement('div');
-        toolbar.className = 'usa-ai-toolbar';
-        toolbar.innerHTML = `
-          <button class="usa-copy-btn usa-copy-text" title="复制纯文本">📋 复制</button>
-          <button class="usa-copy-btn usa-copy-md" title="复制 Markdown">📄 Markdown</button>
-        `;
-        toolbar.querySelector('.usa-copy-text').addEventListener('click', (e) => {
-          e.stopPropagation();
-          let textToCopy = node.innerText;
-          textToCopy = textToCopy.replace('📋 复制\n📄 Markdown', '').trim();
-          navigator.clipboard.writeText(textToCopy).then(() => {
-            const btn = toolbar.querySelector('.usa-copy-text');
-            btn.textContent = '✅ 已复制';
-            setTimeout(() => btn.textContent = '📋 复制', 2000);
-          });
-        });
-        toolbar.querySelector('.usa-copy-md').addEventListener('click', (e) => {
-          e.stopPropagation();
-          navigator.clipboard.writeText(rawContent).then(() => {
-            const btn = toolbar.querySelector('.usa-copy-md');
-            btn.textContent = '✅ 已复制';
-            setTimeout(() => btn.textContent = '📄 Markdown', 2000);
-          });
-        });
-        node.appendChild(toolbar);
-      }
-
-      // 保存到本地历史记录
-      chrome.storage.local.get(['chatHistoryList'], (data) => {
-        let list = data.chatHistoryList || [];
-        const chatItem = {
-          id: inst.id,
-          date: Date.now(),
-          url: window.location.href,
-          title: document.title,
-          summary: pendingUserQuestion.slice(0, 30) + (pendingUserQuestion.length > 30 ? '...' : ''),
-          messages: chatHistory
-        };
-        const idx = list.findIndex(item => item.id === inst.id);
-        if (idx >= 0) list[idx] = chatItem;
-        else list.unshift(chatItem);
-        
-        if (list.length > 100) list = list.slice(0, 100);
-        chrome.storage.local.set({ chatHistoryList: list });
-      });
-
+            attachCopyToolbar(node, rawContent);
+            saveChatHistory(inst.id, pendingUserQuestion, chatHistory);
 
             currentAIBubble = null;
           }
@@ -1802,33 +1775,3 @@ var __usaInjected;
   });
 
 })();
-
-
-  // 监听来自 popup 的全页总结请求
-  chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
-    if (msg.type === 'SUMMARIZE_PAGE') {
-      if (dead) return;
-      const text = document.body.innerText || '';
-      const truncated = text.slice(0, 50000);
-      if (!truncated.trim()) { alert('当前网页无法提取到文本。'); return; }
-      
-      const pageCtx = '【系统指令】：以下是该网页的完整文本内容。请为其提供一份结构清晰的核心要点总结（TL;DR），并准备好回答用户针对该网页内容的后续提问。\n\n' + truncated;
-      const inst = createDialogInstance('（整个网页内容已作为背景资料载入）', pageCtx);
-      activeDialogs.push(inst);
-      if (activeDialogs.length > MAX_WINDOWS) activeDialogs.shift().closeDialog();
-      updateAllDialogNumbers();
-      
-      const cx = window.innerWidth / 2 - 180;
-      const cy = window.innerHeight / 2 - 200;
-      inst.openDialog(Math.max(10, cx), Math.max(10, cy));
-      
-      setTimeout(() => {
-        const input = inst.dialog.querySelector('.usa-input');
-        if (input) {
-          input.value = '请总结这篇网页的核心内容。';
-          const btn = inst.dialog.querySelector('.usa-send');
-          if (btn) btn.click();
-        }
-      }, 300);
-    }
-  });

@@ -8,31 +8,33 @@ const fs = require('fs');
 const vm = require('vm');
 const path = require('path');
 
+const ROOT = path.resolve(__dirname, '..');
+
 let pass = 0, failCount = 0;
 function ok(cond, msg) {
   if (cond) { pass++; console.log('  ✓ ' + msg); }
   else { failCount++; console.log('  ✗ ' + msg); }
 }
 
-// 从真实源码抽取后台的 SYSTEM_PROMPT 常量，确保测试对照的是真值（避免漂移）
-const bgSrc = fs.readFileSync('background.js', 'utf8');
-const m = bgSrc.match(/const SYSTEM_PROMPT = '(.*?)';/);
-const EXPECTED_DEFAULT = m[1];
-ok(!!EXPECTED_DEFAULT, '从 background.js 提取到 SYSTEM_PROMPT 常量');
-
-// options.js 中的 DEFAULT_SYSTEM_PROMPT 必须与后台 SYSTEM_PROMPT 完全一致
-const optSrc = fs.readFileSync('options.js', 'utf8');
-const m2 = optSrc.match(/var DEFAULT_SYSTEM_PROMPT = '(.*?)';/);
-ok(m2 && m2[1] === EXPECTED_DEFAULT, 'options.js 的 DEFAULT_SYSTEM_PROMPT 与后台 SYSTEM_PROMPT 一致（单一事实源）');
+// 从真实源码抽取常量，避免对照值漂移（默认提示词的单一事实源已迁至 shared/config.js）
+const cfgSrc = fs.readFileSync(path.join(ROOT, 'shared', 'config.js'), 'utf8');
+const mCfg = cfgSrc.match(/DEFAULT_SYSTEM_PROMPT:\s*'([\s\S]*?)'\s*};/);
+const EXPECTED_DEFAULT = mCfg ? mCfg[1] : '';
+ok(!!EXPECTED_DEFAULT, '从 shared/config.js 提取到默认提示词');
+const bgSrc = fs.readFileSync(path.join(ROOT, 'background.js'), 'utf8');
+const optSrc = fs.readFileSync(path.join(ROOT, 'options.js'), 'utf8');
+ok(optSrc.indexOf('globalThis.USA_CONFIG.DEFAULT_SYSTEM_PROMPT') >= 0,
+  'options.js 引用 shared/config.js 的默认提示词（单一事实源）');
 
 // ============================================================
 // 第 1 部分：options.js（jsdom 真实加载）
 // ============================================================
 console.log('\n=== 第 1 部分：options.js 设置页行为 ===');
-const { JSDOM } = require('C:\\Users\\111\\node_modules\\jsdom');
-const html = fs.readFileSync('options.html', 'utf8').replace('<script src="options.js"></script>', '');
+const { JSDOM } = require('jsdom');
+const html = fs.readFileSync(path.join(ROOT, 'options.html'), 'utf8').replace('<script src="options.js"></script>', '');
 const dom = new JSDOM(html, { runScripts: 'outside-only' });
 const { window } = dom;
+window.eval(cfgSrc); // options.js 依赖 shared/config.js 的 USA_CONFIG
 
 function makeChrome(initialStore) {
   const store = initialStore;
@@ -119,6 +121,7 @@ let lastMessages = null;
 let scenarioData = null;
 const ctx = {
   console,
+  importScripts: () => { vm.runInContext(cfgSrc, ctx); },
   setTimeout, clearTimeout,
   AbortController,
   TextDecoder,

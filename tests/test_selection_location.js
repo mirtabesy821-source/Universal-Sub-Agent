@@ -11,28 +11,31 @@ const fs = require('fs');
 const vm = require('vm');
 const path = require('path');
 
+const ROOT = path.resolve(__dirname, '..');
+
 let pass = 0, failCount = 0;
 function ok(cond, msg) {
   if (cond) { pass++; console.log('  ✓ ' + msg); }
   else { failCount++; console.log('  ✗ ' + msg); }
 }
 
-// 从真实源码抽取常量，避免对照值漂移
-const bgSrc = fs.readFileSync('background.js', 'utf8');
-const mSys = bgSrc.match(/const SYSTEM_PROMPT = '(.*?)';/);
-const EXPECTED_DEFAULT = mSys[1];
-ok(!!EXPECTED_DEFAULT, '从 background.js 提取到 SYSTEM_PROMPT');
-const optSrc = fs.readFileSync('options.js', 'utf8');
-const mOpt = optSrc.match(/var DEFAULT_SYSTEM_PROMPT = '(.*?)';/);
-ok(mOpt && mOpt[1] === EXPECTED_DEFAULT, 'options.js 与 background.js 默认提示词一致（单一事实源）');
+// 从真实源码抽取常量，避免对照值漂移（默认提示词的单一事实源已迁至 shared/config.js）
+const cfgSrc = fs.readFileSync(path.join(ROOT, 'shared', 'config.js'), 'utf8');
+const mCfg = cfgSrc.match(/DEFAULT_SYSTEM_PROMPT:\s*'([\s\S]*?)'\s*};/);
+const EXPECTED_DEFAULT = mCfg ? mCfg[1] : '';
+ok(!!EXPECTED_DEFAULT, '从 shared/config.js 提取到默认提示词');
+const bgSrc = fs.readFileSync(path.join(ROOT, 'background.js'), 'utf8');
+const optSrc = fs.readFileSync(path.join(ROOT, 'options.js'), 'utf8');
+ok(optSrc.indexOf('globalThis.USA_CONFIG.DEFAULT_SYSTEM_PROMPT') >= 0,
+  'options.js 引用 shared/config.js 的默认提示词（单一事实源）');
 ok(EXPECTED_DEFAULT.indexOf('⟦ ⟧') >= 0, '默认提示词已引导 AI 以 ⟦⟧ 标记实例为准');
 
 // ============================================================
 // 第 1 部分：content.js —— 精确锁定重复文本中的"那一个"
 // ============================================================
 console.log('\n=== 第 1 部分：content.js 选词精确定位（重复文本场景）===');
-const { JSDOM } = require('C:\\Users\\111\\node_modules\\jsdom');
-const CONTENT_JS = path.join(__dirname, 'content.js');
+const { JSDOM } = require('jsdom');
+const CONTENT_JS = path.join(ROOT, 'content.js');
 const src = fs.readFileSync(CONTENT_JS, 'utf8');
 
 // 公式中含多处"平方"：a平方 + b平方 + c平方 + d平方
@@ -147,6 +150,7 @@ let lastMessages = null;
 let scenarioData = null;
 const ctx = {
   console, setTimeout, clearTimeout, AbortController, TextDecoder,
+  importScripts: () => { vm.runInContext(cfgSrc, ctx); },
   fetch: async (url, opts) => { lastMessages = JSON.parse(opts.body).messages; return { ok: true, body: { getReader: () => ({ read: async () => ({ done: true, value: undefined }) }) } }; },
   chrome: {
     storage: { local: { get: (keys) => Promise.resolve(scenarioData), set: (o, cb) => { cb && cb(); }, remove: (k, cb) => { cb && cb(); } } },

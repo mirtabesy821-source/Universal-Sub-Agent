@@ -7,9 +7,9 @@
 
 const fs = require('fs');
 const path = require('path');
-const { JSDOM } = require('C:\\Users\\111\\node_modules\\jsdom');
+const { JSDOM } = require('jsdom');
 
-const CONTENT_JS = path.join(__dirname, 'content.js');
+const CONTENT_JS = path.join(__dirname, '..', 'content.js');
 const src = fs.readFileSync(CONTENT_JS, 'utf8');
 
 // ---- 1. 构建 DOM ----

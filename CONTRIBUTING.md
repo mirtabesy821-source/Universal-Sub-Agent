@@ -17,6 +17,11 @@ Thanks for your interest in contributing! / 感谢你有兴趣参与贡献！
 3. Enable "Developer mode" (top right).
 4. Click "Load unpacked" and select the project folder.
 5. Make changes, then click the reload icon on the extension card to test.
+6. Run the test suite before submitting:
+   ```bash
+   npm install
+   npm test
+   ```
 
 ## Code Style / 代码风格
 

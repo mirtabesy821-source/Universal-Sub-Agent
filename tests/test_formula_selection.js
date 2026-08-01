@@ -2,19 +2,19 @@
 // 覆盖：
 //   1) extractKatexSource / getSelectionText：选中 KaTeX 公式返回干净 TeX（e² → $e^2$），而非 "e 2"
 //   2) captureSelectionInfo：公式选词短路返回 isFormula + ⟦$e^2$⟧，避免 textContent 重复文本错乱
-//   3) renderInline：货币 $5 / $10.50 不被误当公式；$e^2$ 正常转 \(e^2\)
+//   3) renderMathOnly：货币 $5 / $10.50 不被误当公式；$e^2$ 正常转 \(e^2\)
 //   4) renderMathOnly：* _ ` 不被当作 Markdown；公式正常转 \(e^2\)
 //   5) 端到端：mouseup 选中公式 → 发送 → ASK_AI 载荷 selectedText=$e^2$、selectionContext.isFormula=true
 
 const fs = require('fs');
 const path = require('path');
-const { JSDOM } = require('C:\\Users\\111\\node_modules\\jsdom');
+const { JSDOM } = require('jsdom');
 
-const CONTENT_JS = path.join(__dirname, 'content.js');
+const CONTENT_JS = path.join(__dirname, '..', 'content.js');
 let src = fs.readFileSync(CONTENT_JS, 'utf8');
 // 测试专用：在 IIFE 闭合前把内部函数暴露到 window.__test（不修改源码文件）
 src = src.replace(/\}\)\(\);\s*$/,
-  'window.__test={getSelectionText:getSelectionText,captureSelectionInfo:captureSelectionInfo,renderInline:renderInline,renderMathOnly:renderMathOnly,looksLikeCurrency:looksLikeCurrency,extractMathSource:extractMathSource,closestMathContainer:closestMathContainer,extractTexFromMathContainer:extractTexFromMathContainer};\n})();');
+  'window.__test={getSelectionText:getSelectionText,captureSelectionInfo:captureSelectionInfo,renderMathOnly:renderMathOnly,looksLikeCurrency:looksLikeCurrency,extractMathSource:extractMathSource,closestMathContainer:closestMathContainer,extractTexFromMathContainer:extractTexFromMathContainer};\n})();');
 
 let pass = 0, fail = 0;
 function ok(cond, name) {
@@ -164,10 +164,10 @@ ok(T.extractTexFromMathContainer(mj2c) && T.extractTexFromMathContainer(mj2c).te
 ok(T.extractTexFromMathContainer(mj3c) && T.extractTexFromMathContainer(mj3c).tex === '\\int x', 'extractTexFromMathContainer：MathJax v3 取 script 源码');
 
 console.log('\n=== Part B：公式 / 货币 渲染守卫 ===');
-ok(!T.renderInline('$5$').includes(''), 'renderInline：货币 $5 不被转成公式（无公式占位符）');
-ok(!T.renderInline('$10.50$').includes(''), 'renderInline：货币 $10.50 不被转成公式（无公式占位符）');
-ok(T.renderInline('$e^2$').includes('\\(e^2\\)'), 'renderInline：公式 $e^2$ 正常转 \\(e^2\\)');
-ok(T.renderInline('$$x+y$$').includes('$$x+y$$'), 'renderInline：块公式 $$x+y$$ 保留');
+ok(!T.renderMathOnly('$5$').includes(''), 'renderMathOnly：货币 $5 不被转成公式（无公式占位符）');
+ok(!T.renderMathOnly('$10.50$').includes(''), 'renderMathOnly：货币 $10.50 不被转成公式（无公式占位符）');
+ok(T.renderMathOnly('$e^2$').includes('\\(e^2\\)'), 'renderMathOnly：公式 $e^2$ 正常转 \\(e^2\\)');
+ok(T.renderMathOnly('$$x+y$$').includes('$$x+y$$'), 'renderMathOnly：块公式 $$x+y$$ 保留');
 ok(T.renderMathOnly('$e^2$').includes('\\(e^2\\)'), 'renderMathOnly：公式 $e^2$ 转 \\(e^2\\)');
 ok(T.renderMathOnly('a*b*c') === 'a*b*c', 'renderMathOnly：* 不被当作 Markdown 斜体');
 ok(T.looksLikeCurrency('5') && T.looksLikeCurrency('10.50') && T.looksLikeCurrency('3,000') && !T.looksLikeCurrency('e^2') && !T.looksLikeCurrency('x') , 'looksLikeCurrency：5/10.50/3,000 为货币；e^2/x 为公式');

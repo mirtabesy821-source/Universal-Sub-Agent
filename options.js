@@ -175,13 +175,28 @@ function loadHistory() {
         <div class="hi-header">
           <div>
             <div class="hi-title">${escapeHtml(item.title || '未知网页')}</div>
-            <a href="${item.url}" class="hi-url" target="_blank">${escapeHtml(item.url)}</a>
+            <span class="hi-url-wrap"></span>
           </div>
           <div class="hi-date">${dateStr}</div>
         </div>
         <div class="hi-summary">💬 ${escapeHtml(item.summary || '...')} <span style="font-size:11px;color:#9aa0a6;">(点击展开详情)</span></div>
         <div class="hi-messages">${msgsHtml}</div>
       `;
+
+      // 历史链接：用 DOM 构建 + 协议白名单校验，杜绝 javascript:/data: 等危险协议注入
+      const urlWrap = el.querySelector('.hi-url-wrap');
+      const safe = safeUrl(item.url);
+      if (urlWrap) {
+        const a = document.createElement('a');
+        a.className = 'hi-url';
+        a.textContent = item.url || '';
+        if (safe) {
+          a.href = safe;
+          a.target = '_blank';
+          a.rel = 'noopener noreferrer';
+        }
+        urlWrap.appendChild(a);
+      }
       
       const summaryBox = el.querySelector('.hi-summary');
       const msgsBox = el.querySelector('.hi-messages');
@@ -200,6 +215,18 @@ function escapeHtml(str) {
     const escape = { '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' };
     return escape[match];
   });
+}
+
+// 仅允许 http/https/file 协议的 URL；解析失败或危险协议一律返回 null（不生成可点击链接）
+function safeUrl(raw) {
+  if (!raw) return null;
+  try {
+    const u = new URL(String(raw), 'https://invalid.invalid/');
+    if (u.protocol === 'http:' || u.protocol === 'https:' || u.protocol === 'file:') {
+      return u.href;
+    }
+  } catch (_) { /* 解析失败视为不安全 */ }
+  return null;
 }
 
 document.getElementById('clearHistoryBtn').addEventListener('click', () => {

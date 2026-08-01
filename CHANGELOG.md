@@ -2,6 +2,28 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.3.1] - 2026-08-01
+
+### Removed / 移除
+- **移除「总结当前网页」功能** — 该功能自 1.3.0 引入起即存在作用域错误（SUMMARIZE_PAGE 监听器位于 IIFE 之外，引用内部变量 `dead` 直接抛 `ReferenceError`，导致功能从未可用）。经评估后决定直接移除：popup 按钮、popup.js 处理器、content.js 监听器、README 相关说明一并清理。
+
+### Fixed / 修复
+- **修复测试套件不可运行** — 7 个测试此前全部无法运行：
+  - `04c6880` 将测试移入 `tests/` 后未同步内部路径（`__dirname` 指向 `tests/`，找不到 `content.js` / `katex/`）；
+  - `test_selection_location.js` / `test_system_prompt.js` 用正则匹配已不存在的 `const SYSTEM_PROMPT = '...'`（常量已迁至 `shared/config.js`），加载即崩溃；
+  - `test_formula_selection.js` 引用了 content.js 中已不存在的 `renderInline` 函数；
+  - 依赖本机绝对路径 `C:\Users\111\node_modules\jsdom`，无法复现。
+  - 现改为基于 `__dirname` 的仓库根路径、从 `shared/config.js` 提取默认提示词、统一 `require('jsdom')`，并新增 `package.json`（`npm install && npm test`）。
+- **移除未使用的 `activeTab` / `scripting` 权限** — 代码中从未调用 `chrome.scripting`，声明式 content script 已由 `<all_urls>` 覆盖；按最小权限原则精简（同步更新 SECURITY.md / privacy.html）。
+- **XSS 加固** — popup.js 不再用 `innerHTML` 拼接用户自定义模型名（改为 DOM + `textContent`）；options.js 历史记录链接改为协议白名单（http/https/file）+ DOM 构建，杜绝 `javascript:` 等危险协议。
+- **历史记录写入容错** — content.js 保存历史增加错误回调与异常捕获，写入失败仅告警、不影响对话。
+- **消除重复代码** — 复制工具栏与历史保存逻辑在 `handleDone` 与“停止生成”两处重复实现，抽取为 `attachCopyToolbar` / `saveChatHistory`。
+
+### Docs / 文档
+- README 同步（移除总结功能、补充 MiMo 厂商、更新项目结构与测试说明）。
+- 新增 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)（KaTeX / marked / DOMPurify 许可证声明）。
+- 新增 GitHub Actions CI（语法检查 + 全量测试）。
+
 ## [1.2.12] - 2026-07-12
 
 ### Fixed / 修复

@@ -28,8 +28,18 @@ chrome.storage.local.get(['apiKeys', 'models', 'provider'], function (data) {
   }
 
   var customModel = models[provider] || '';
-  var modelStr = customModel ? (' · 模型: <b>' + customModel + '</b>') : '';
-  info.innerHTML = '厂商: <b>' + providerName + '</b>' + modelStr;
+  // 全部使用 textContent 构建，避免把用户自定义的模型名当作 HTML 解析（XSS 防护）
+  info.textContent = '';
+  info.appendChild(document.createTextNode('厂商: '));
+  var providerStrong = document.createElement('b');
+  providerStrong.textContent = providerName;
+  info.appendChild(providerStrong);
+  if (customModel) {
+    info.appendChild(document.createTextNode(' · 模型: '));
+    var modelStrong = document.createElement('b');
+    modelStrong.textContent = customModel;
+    info.appendChild(modelStrong);
+  }
 
   // 填充快速切换下拉框（只显示已配置 Key 的厂商）
   providerSelect.innerHTML = '';
@@ -61,20 +71,6 @@ providerSelect.addEventListener('change', function () {
   chrome.storage.local.set({ provider: newProvider }, function () {
     // 刷新 popup 显示
     location.reload();
-  });
-});
-
-document.getElementById('summarizePage').addEventListener('click', () => {
-  chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-    if (tabs[0]) {
-      chrome.tabs.sendMessage(tabs[0].id, { type: 'SUMMARIZE_PAGE' }, () => {
-        if (chrome.runtime.lastError) {
-          document.getElementById('info').innerHTML = '无法在这个页面提取内容（可能是系统页面或未加载完成）。';
-        } else {
-          window.close();
-        }
-      });
-    }
   });
 });
 
