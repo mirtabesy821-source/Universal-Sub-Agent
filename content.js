@@ -404,6 +404,17 @@ var __usaInjected;
     if (host && host.parentNode) host.remove();
   }
 
+  // 扩展上下文有效性检测：扩展被重载/更新后，旧页面上的 content script 上下文
+  // 会失效，任何 chrome.* 调用都会抛 "Extension context invalidated" 未捕获异常。
+  // 检测失败时应 selfDestruct() 静默清理旧 UI，而不是继续抛错刷屏控制台。
+  function isExtensionContextValid() {
+    try {
+      return typeof chrome !== 'undefined' && !!chrome.runtime && !!chrome.runtime.id;
+    } catch (_) {
+      return false;
+    }
+  }
+
 
   // ---------- 2.5 KaTeX 公式引擎（本地打包，由 manifest content_scripts 注入） ----------
   let katexReady = false;
@@ -1399,6 +1410,8 @@ var __usaInjected;
     }
 
     function buildDialog() {
+      // 上下文失效时直接自毁并放弃构建，避免打开一个 chrome API 全部不可用的死窗口
+      if (!isExtensionContextValid()) { selfDestruct(); return null; }
       const wrap = document.createElement('div');
       wrap.innerHTML = dialogTpl;
       const dlg = wrap.firstElementChild;
@@ -1441,6 +1454,8 @@ var __usaInjected;
       setDefaultBtn.addEventListener('click', function (e) {
         e.stopPropagation();
         savedDefaultProvider = currentProvider;
+        // 扩展重载/更新后旧上下文失效：不再调用 chrome API，直接自毁旧 UI
+        if (!isExtensionContextValid()) { selfDestruct(); return; }
         chrome.storage.local.set({ provider: currentProvider }, function () {
           if (setDefaultBtn) {
             setDefaultBtn.classList.add('is-default');
@@ -1505,9 +1520,12 @@ var __usaInjected;
            send(); 
         } 
       });
+      return inst;
     }
 
     function loadProviders(setDefaultBtn) {
+      // 扩展重载/更新后旧页面上下文失效：直接自毁，避免 "Extension context invalidated" 未捕获异常
+      if (!isExtensionContextValid()) { selfDestruct(); return; }
       chrome.storage.local.get(['apiKeys', 'apiKey', 'provider'], function (data) {
         var apiKeys = data.apiKeys || {};
         if (!data.apiKeys && data.apiKey) {
@@ -1552,7 +1570,7 @@ var __usaInjected;
     }
 
     function openDialog(openClientX, openClientY) {
-      buildDialog();
+      if (!buildDialog()) return;   // 上下文失效时 buildDialog 返回 null，直接放弃打开
       chatHistory = [];
       currentAIBubble = null;
       pendingUserQuestion = '';

@@ -1,6 +1,6 @@
 {
   "name": "universal-sub-agent",
-  "version": "1.3.3",
+  "version": "1.3.4",
   "description": "Chrome extension: select any text on any webpage to get instant AI explanations. Multi-window, multi-provider, KaTeX math, Shadow DOM isolation.",
   "private": true,
   "license": "MIT",

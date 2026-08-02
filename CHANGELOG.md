@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.3.4] - 2026-08-02
+
+### Fixed / 修复
+- **「Extension context invalidated」未捕获异常** — 扩展被重载/更新后，已打开网页上的旧 content script 上下文会失效，此时划词打开对话框会在 `loadProviders` 等处抛出 `Uncaught Error: Extension context invalidated.`。新增 `isExtensionContextValid()` 检测：上下文失效时静默自毁旧 UI（移除宿主节点与对话框），不再抛错刷屏控制台；用户刷新页面即可恢复正常使用。
+
 ## [1.3.3] - 2026-08-01
 
 ### Changed / 变更
